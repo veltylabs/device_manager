@@ -2,8 +2,9 @@
 PLAN: "refactor!: migrate github.com/tinywasm -> webtyp.com + adopt view.NewCallerLister"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 12809586858990536772
+PR: https://github.com/veltylabs/device_manager/pull/2
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.

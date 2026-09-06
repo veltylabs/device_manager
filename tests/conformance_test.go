@@ -3,12 +3,27 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/router"
-	"github.com/tinywasm/router/mock"
-	"github.com/tinywasm/view/conformance"
+	"webtyp.com/model"
+	"webtyp.com/router"
+	"webtyp.com/router/mock"
+	"webtyp.com/view"
 	devicemanager "github.com/veltylabs/device_manager"
 )
+
+type fakeCaller struct {
+	reply func(op string, into model.Decodable)
+}
+
+func (f *fakeCaller) Call(op string, args model.Encodable, into model.Decodable, done func(err error)) {
+	if f.reply != nil {
+		f.reply(op, into)
+	}
+	if done != nil {
+		done(nil)
+	}
+}
+
+func (f *fakeCaller) Dispatch(op string, args model.Encodable) {}
 
 func TestMountOps_CreateDevice(t *testing.T) {
 	m := setup(t)
@@ -94,8 +109,8 @@ func TestMountOps_CreateDevice_RBACDenial(t *testing.T) {
 }
 
 func TestView_ListPopulatesItems(t *testing.T) {
-	caller := &conformance.FakeCaller{
-		Reply: func(op string, into model.Decodable) {
+	caller := &fakeCaller{
+		reply: func(op string, into model.Decodable) {
 			if op != devicemanager.OpListDevices {
 				return
 			}
@@ -112,10 +127,10 @@ func TestView_ListPopulatesItems(t *testing.T) {
 	if len(items) != 1 || items[0].ID != "dev_1" || items[0].Label != "Pc Recepcion" {
 		t.Fatalf("unexpected items: %+v", items)
 	}
-	if !p.CanSave() {
-		t.Error("expected CanSave() to be true (WithSaveOp is configured)")
+	if _, ok := p.(view.Saver); !ok {
+		t.Error("expected Presenter to implement view.Saver")
 	}
-	if !p.CanDelete() {
-		t.Error("expected CanDelete() to be true (WithDeleteOp is configured)")
+	if _, ok := p.(view.Deleter); !ok {
+		t.Error("expected Presenter to implement view.Deleter")
 	}
 }

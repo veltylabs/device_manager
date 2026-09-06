@@ -1,9 +1,9 @@
 package devicemanager
 
 import (
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/form/input"
-	"github.com/tinywasm/model"
+	"webtyp.com/fmt"
+	"webtyp.com/input"
+	"webtyp.com/model"
 )
 
 // Exported, greppable, the ONLY place these literals exist — enum-valued column rule (AGENTS.md).
