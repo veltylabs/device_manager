@@ -3,7 +3,7 @@
 ## Domain Scope
 `device_manager` owns the registry of network/office equipment (computers, printers, servers, and
 other devices) per tenant/location. It is the productionized form of the
-[`tinywasm/layout/platformd/modules/devices`](https://github.com/tinywasm/layout/blob/main/platformd/modules/devices/devices.go)
+[`webtyp/layout/platformd/modules/devices`](https://github.com/webtyp/layout/blob/main/platformd/modules/devices/devices.go)
 UI demo (`id`/`name`/`ip`), extended with `type`, `location`, and `is_active` for real inventory
 management.
 
@@ -19,12 +19,12 @@ management.
   - `orm.DB` for storage (backend-agnostic); `ddl.CreateTable` (over `db.RawConn()`) for the
     module's own schema migration in `New()`.
   - `router.OpModule` (`ModelName()` + `MountOps(reg router.OpRegistry)`) for transport — the
-    module never implements `router.APIModule`/`Router`, never imports `tinywasm/mcp`.
+    module never implements `router.APIModule`/`Router`, never imports `webtyp/mcp`.
   - `model.IDGenerator` for identity (`Deps.IDs`, required — the module never builds its own).
   - `events.Publisher` for domain events (`Deps.Publisher`, optional — `nil` disables publishing
     silently).
   - `view.Presenter` (`NewView(caller router.Caller) view.Presenter`) for UI, built with only
-    `view`+`model`+`router` — the app picks the renderer (`tinywasm/layout/crudview` or any other).
+    `view`+`model`+`router` — the app picks the renderer (`webtyp/layout/crudview` or any other).
 - **Multi-tenancy**: every `Device` row carries `tenant_id`; every read/update/delete condition
   includes it (`orm.Eq(Device_.Id, id), orm.Eq(Device_.TenantId, tenantId)`).
 - **Typed events**: every published event carries `*Device` (`model.Encodable`), never a bare map.

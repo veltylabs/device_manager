@@ -3,11 +3,11 @@ package tests
 import (
 	"testing"
 
-	"github.com/tinywasm/events"
-	"github.com/tinywasm/fmt"
-	"github.com/tinywasm/model"
-	"github.com/tinywasm/orm"
-	"github.com/tinywasm/storage/mem"
+	"webtyp.com/events"
+	"webtyp.com/fmt"
+	"webtyp.com/model"
+	"webtyp.com/orm"
+	"webtyp.com/storage/mem"
 	devicemanager "github.com/veltylabs/device_manager"
 )
 
