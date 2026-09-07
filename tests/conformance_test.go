@@ -25,14 +25,14 @@ func (f *fakeCaller) Call(op string, args model.Encodable, into model.Decodable,
 
 func (f *fakeCaller) Dispatch(op string, args model.Encodable) {}
 
-func TestMountOps_CreateDevice(t *testing.T) {
+func TestMountOperations_CreateDevice(t *testing.T) {
 	m := setup(t)
 	if m.ModelName() != "device_manager" {
 		t.Fatalf("expected ModelName %q, got %q", "device_manager", m.ModelName())
 	}
 
 	reg := &mock.Router{}
-	m.MountOps(reg)
+	m.MountOperations(reg)
 	reg.Configure(mock.Config{
 		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
 		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
@@ -52,10 +52,10 @@ func TestMountOps_CreateDevice(t *testing.T) {
 	}
 }
 
-func TestMountOps_CreateDevice_DecodeError(t *testing.T) {
+func TestMountOperations_CreateDevice_DecodeError(t *testing.T) {
 	m := setup(t)
 	reg := &mock.Router{}
-	m.MountOps(reg)
+	m.MountOperations(reg)
 	reg.Configure(mock.Config{
 		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
 		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
@@ -70,10 +70,10 @@ func TestMountOps_CreateDevice_DecodeError(t *testing.T) {
 	}
 }
 
-func TestMountOps_GetDevice_NotFound(t *testing.T) {
+func TestMountOperations_GetDevice_NotFound(t *testing.T) {
 	m := setup(t)
 	reg := &mock.Router{}
-	m.MountOps(reg)
+	m.MountOperations(reg)
 	reg.Configure(mock.Config{
 		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
 		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
@@ -88,10 +88,10 @@ func TestMountOps_GetDevice_NotFound(t *testing.T) {
 	}
 }
 
-func TestMountOps_CreateDevice_RBACDenial(t *testing.T) {
+func TestMountOperations_CreateDevice_RBACDenial(t *testing.T) {
 	m := setup(t)
 	reg := &mock.Router{}
-	m.MountOps(reg)
+	m.MountOperations(reg)
 	reg.Configure(mock.Config{
 		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
 		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return false },

@@ -17,17 +17,17 @@ const (
 
 func (m *Module) ModelName() string { return "device_manager" }
 
-func (m *Module) MountOps(reg router.OpRegistry) {
-	reg.Op(OpListDevices, m.opListDevices).Requires("device", model.Read).Accepts(&ListDevicesArgs{})
-	reg.Op(OpGetDevice, m.opGetDevice).Requires("device", model.Read).Accepts(&GetDeviceArgs{})
-	reg.Op(OpCreateDevice, m.opCreateDevice).Requires("device", model.Create).Accepts(&Device{})
-	reg.Op(OpUpdateDevice, m.opUpdateDevice).Requires("device", model.Update).Accepts(&Device{})
-	reg.Op(OpUpsertDevice, m.opUpsertDevice).Requires("device", model.Create|model.Update).Accepts(&Device{})
-	reg.Op(OpDeactivateDevice, m.opDeactivateDevice).Requires("device", model.Update).Accepts(&DeactivateDeviceArgs{})
-	reg.Op(OpDeleteDevice, m.opDeleteDevice).Requires("device", model.Delete).Accepts(&DeleteDeviceArgs{})
+func (m *Module) MountOperations(reg router.OperationRegistry) {
+	reg.Operation(OpListDevices, m.opListDevices).Requires("device", model.Read).Accepts(&ListDevicesArgs{})
+	reg.Operation(OpGetDevice, m.opGetDevice).Requires("device", model.Read).Accepts(&GetDeviceArgs{})
+	reg.Operation(OpCreateDevice, m.opCreateDevice).Requires("device", model.Create).Accepts(&Device{})
+	reg.Operation(OpUpdateDevice, m.opUpdateDevice).Requires("device", model.Update).Accepts(&Device{})
+	reg.Operation(OpUpsertDevice, m.opUpsertDevice).Requires("device", model.Create|model.Update).Accepts(&Device{})
+	reg.Operation(OpDeactivateDevice, m.opDeactivateDevice).Requires("device", model.Update).Accepts(&DeactivateDeviceArgs{})
+	reg.Operation(OpDeleteDevice, m.opDeleteDevice).Requires("device", model.Delete).Accepts(&DeleteDeviceArgs{})
 }
 
-var _ router.OpModule = (*Module)(nil)
+var _ router.OperationModule = (*Module)(nil)
 
 func (m *Module) opListDevices(ctx router.Context) {
 	var args ListDevicesArgs
