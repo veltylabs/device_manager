@@ -1,7 +1,6 @@
 package devicemanager
 
 import (
-	"webtyp.com/ddl"
 	"webtyp.com/events"
 	"webtyp.com/fmt"
 	"webtyp.com/model"
@@ -21,17 +20,11 @@ type Module struct {
 	pub events.Publisher
 }
 
-// New connects the module to an already-connected *orm.DB and migrates its own schema when the
-// backend supports DDL (storage/mem, used by this module's own tests, does not — the type
-// assertion below is how the module stays agnostic to that, same idiom as every sibling module).
+// New connects the module to an already-connected *orm.DB; the schema is assumed
+// to already exist — see the migrate subpackage.
 func New(db *orm.DB, deps Deps) (*Module, error) {
 	if deps.IDs == nil {
 		return nil, fmt.Err("device_manager: Deps.IDs is required")
-	}
-	if ddlCompiler, ok := db.RawConn().(ddl.Compiler); ok {
-		if err := ddl.New(db.RawConn(), ddlCompiler).CreateTable(&Device{}); err != nil {
-			return nil, err
-		}
 	}
 	return &Module{db: db, ids: deps.IDs, pub: deps.Publisher}, nil
 }
