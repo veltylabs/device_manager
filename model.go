@@ -21,30 +21,18 @@ var (
 	BaseInt_FieldInt   = model.Int()
 )
 
-// deviceTypeWidget: closed-options radio widget for the `type` field — the
-// form/input/gender.go pattern AGENTS.md requires for a user-editable enum.
-type deviceTypeWidget struct {
-	input.Base
-}
-
-func (w *deviceTypeWidget) Clone(parentID, name string) input.Input {
-	clone := *w
-	clone.InitBase(parentID, name, "radio")
-	return &clone
-}
-
+// deviceType: closed-options radio widget for the `type` field. input.Radio
+// takes the option list directly (webtyp.com/input v0.0.7+), so this no
+// longer needs its own input.Base-embedding type + Clone() — that boilerplate
+// is what the form/input/gender.go pattern used to require before Radio()
+// grew inline options.
 func deviceType() input.Input {
-	w := &deviceTypeWidget{}
-	w.Letters = true
-	w.Minimum = 1
-	w.InitBase("", "", "radio")
-	w.SetOptions(
+	return input.Radio(
 		fmt.KeyValue{Key: DeviceTypeComputer, Value: "Computer"},
 		fmt.KeyValue{Key: DeviceTypePrinter, Value: "Printer"},
 		fmt.KeyValue{Key: DeviceTypeServer, Value: "Server"},
 		fmt.KeyValue{Key: DeviceTypeOther, Value: "Other"},
 	)
-	return w
 }
 
 var DeviceModel = model.Definition{
