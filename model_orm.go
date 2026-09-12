@@ -74,8 +74,6 @@ func (m *Device) DecodeFields(r model.FieldReader) {
 
 type DeviceList []*Device
 
-func (s *DeviceList) Schema() []model.Field { return nil }
-func (s *DeviceList) Pointers() []any       { return nil }
 func (s *DeviceList) Len() int              { return len(*s) }
 func (s *DeviceList) At(i int) model.Fielder {
 	return (*s)[i]
@@ -176,8 +174,6 @@ func (m *ListDevicesArgs) DecodeFields(r model.FieldReader) {
 
 type ListDevicesArgsList []*ListDevicesArgs
 
-func (s *ListDevicesArgsList) Schema() []model.Field { return nil }
-func (s *ListDevicesArgsList) Pointers() []any       { return nil }
 func (s *ListDevicesArgsList) Len() int              { return len(*s) }
 func (s *ListDevicesArgsList) At(i int) model.Fielder {
 	return (*s)[i]
@@ -222,8 +218,6 @@ func (m *GetDeviceArgs) DecodeFields(r model.FieldReader) {
 
 type GetDeviceArgsList []*GetDeviceArgs
 
-func (s *GetDeviceArgsList) Schema() []model.Field { return nil }
-func (s *GetDeviceArgsList) Pointers() []any       { return nil }
 func (s *GetDeviceArgsList) Len() int              { return len(*s) }
 func (s *GetDeviceArgsList) At(i int) model.Fielder {
 	return (*s)[i]
@@ -268,8 +262,6 @@ func (m *DeactivateDeviceArgs) DecodeFields(r model.FieldReader) {
 
 type DeactivateDeviceArgsList []*DeactivateDeviceArgs
 
-func (s *DeactivateDeviceArgsList) Schema() []model.Field { return nil }
-func (s *DeactivateDeviceArgsList) Pointers() []any       { return nil }
 func (s *DeactivateDeviceArgsList) Len() int              { return len(*s) }
 func (s *DeactivateDeviceArgsList) At(i int) model.Fielder {
 	return (*s)[i]
@@ -314,8 +306,6 @@ func (m *DeleteDeviceArgs) DecodeFields(r model.FieldReader) {
 
 type DeleteDeviceArgsList []*DeleteDeviceArgs
 
-func (s *DeleteDeviceArgsList) Schema() []model.Field { return nil }
-func (s *DeleteDeviceArgsList) Pointers() []any       { return nil }
 func (s *DeleteDeviceArgsList) Len() int              { return len(*s) }
 func (s *DeleteDeviceArgsList) At(i int) model.Fielder {
 	return (*s)[i]

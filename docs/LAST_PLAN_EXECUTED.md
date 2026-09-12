@@ -1,228 +1,93 @@
 ---
-PLAN: "fix: move schema creation out of New() into a separate migrate subpackage, matching webtyp.com/auth and webtyp.com/rbac"
+PLAN: "chore: drop the Schema()/Pointers() stubs from list types"
 EXECUTOR: jules
 REVIEWER: none
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
+>
+> **Phase C** of
+> [`LIST_CONTRACT_MASTER_PLAN.md`](https://github.com/webtyp/docs/blob/main/LIST_CONTRACT_MASTER_PLAN.md).
+> Runs in parallel with the other phase-C repos.
+>
+> **Depends on phase A** (`webtyp.com/model`) and **phase B** (`webtyp.com/ormc`).
+> As the first line of work: `go get webtyp.com/model@latest`. Never add a
+> `replace`, never invent a version.
 
-# Plan — a `migrate/` subpackage replaces the `CreateTable` call inside `New()`
+# Plan — `github.com/veltylabs/device_manager`: a list stops claiming it has columns
 
-## Part of a multi-repo wave
+## 0. Context (verified against the repo — do not re-diagnose)
 
-This is module 2 of `DDL_MIGRATE_ISOLATION_MASTER_PLAN.md` (orchestrator:
-`webtyp.com/app-releases`, `docs/DDL_MIGRATE_ISOLATION_MASTER_PLAN.md`). No
-dependencies — dispatch any time, in parallel with `item_catalog`'s and
-`clinical_encounter`'s identical plans. `veltylabs/mjosefa-cms`'s
-`cmd/migrate` stage depends on the tag this plan produces.
-
-## Why
-
-Same defect as `item_catalog` (the reference module for this wave, see its
-`docs/PLAN.md` at
-`https://github.com/veltylabs/item_catalog/blob/main/docs/PLAN.md` for the
-full justification): `New()` (`module.go:27-37`) runs
-`ddl.CreateTable(&Device{})` unconditionally against a real SQL backend,
-with no separate, callable migration step. This repo brings itself in line
-with `webtyp.com/auth/authority.Migrate` / `webtyp.com/rbac.Migrate` — the
-pattern `item_catalog` establishes for this whole wave.
-
-**Migrate must live in its own subpackage, `migrate/`, not a new file in
-the root `devicemanager` package.** `mjosefa-cms/modules/device_manager/
-view.go` (compiled into the WASM client) imports this repo's root package
-for `devicemanager.NewView(caller)`. If `Migrate`/`webtyp.com/ddl` stayed in
-that same root package, `ddl` would still link into the WASM binary through
-the view import, regardless of any build tag the composition root puts on
-its own `backend.go`. A separate `migrate/` subpackage that nothing on the
-WASM build path ever imports keeps `ddl` out of that build graph entirely.
-
-**This plan does not merge or consolidate `device_manager` into
-`item_catalog` or any other module — it stays a fully independent module,
-with its own independent `Migrate`.**
-
-## What to change
-
-### 1. `module.go` — remove the DDL block from `New()`
-
-Before:
+`model.FielderSlice` used to embed `model.Fielder`, so every list type had to
+answer "what are your columns?" — a question a sequence of rows cannot have.
+`ormc` therefore emitted, on every generated list:
 
 ```go
-func New(db *orm.DB, deps Deps) (*Module, error) {
-	if deps.IDs == nil {
-		return nil, fmt.Err("device_manager: Deps.IDs is required")
-	}
-	if ddlCompiler, ok := db.RawConn().(ddl.Compiler); ok {
-		if err := ddl.New(db.RawConn(), ddlCompiler).CreateTable(&Device{}); err != nil {
-			return nil, err
-		}
-	}
-	return &Module{db: db, ids: deps.IDs, pub: deps.Publisher}, nil
-}
+func (s *XList) Schema() []model.Field { return nil }
+func (s *XList) Pointers() []any       { return nil }
 ```
 
-After:
+Nothing ever called them: the json codec reaches rows through
+`Len()`/`At()`/`Append()` and type-asserts the **element**, never the list.
 
-```go
-func New(db *orm.DB, deps Deps) (*Module, error) {
-	if deps.IDs == nil {
-		return nil, fmt.Err("device_manager: Deps.IDs is required")
-	}
-	return &Module{db: db, ids: deps.IDs, pub: deps.Publisher}, nil
-}
+The harm is that having them made the lie true for the compiler. A list
+satisfies `model.Fielder`, so `Accepts(&XList{})` compiles and
+`mcp/tool_schema.go` believes it, publishing the tool **advertising that it
+takes no arguments** — no error, no log.
+
+Phase A narrowed `FielderSlice` to `Len`/`At`/`Append`; phase B stopped `ormc`
+emitting the two stubs. This repo now carries them as dead weight. Removing them
+is what closes the hole **here**: until it regenerates, its list types still
+satisfy `model.Fielder`.
+
+**This is not a size optimization.** Measured: ~27 bytes per list type, 0,02 %
+of a real WASM client. Do not justify or scope this change by binary size.
+
+**Anti-footgun.** Do NOT remove the `EncodeFields`/`DecodeFields` no-ops from
+list types. `json.Encode` takes a `model.Encodable`, so deleting those breaks
+every call that serializes a list. That alternative was measured and rejected.
+`Len`, `At` and `Append` are the whole slice contract now and must survive
+untouched.
+
+## Quality rules
+
+```
+RULE: never hand-edit a generated *_orm.go — run the generator.
+RULE: every repeated string is a named constant; string literals forbidden in logic.
+RULE: this repo's behaviour must not change; only dead methods disappear.
 ```
 
-Also update the doc comment directly above `New` (currently explains the
-type-assert-for-DDL idiom) — replace it with a plain one-liner, e.g. `// New
-connects the module to an already-connected *orm.DB; the schema is assumed
-to already exist — see the migrate subpackage.` Remove the now-unused
-`"webtyp.com/ddl"` import from `module.go` (grep the file first: nothing
-else in it uses `ddl.`).
+## Stage 1 — regenerate with the new `ormc`
 
-### 2. New package `migrate/` (a subdirectory, not a file in the root package)
+**Files:** `model_orm.go` (5 list types).
 
-Create `migrate/migrate.go`:
+1. `go get webtyp.com/model@latest` so `FielderSlice` is the narrowed one.
+2. Run `ormc` at the repo root. It rewrites the generated file(s) in place; the
+   header is `DO NOT EDIT. generated by webtyp.com/ormc`.
+3. Confirm the diff contains **only** removals of the two stub methods —
+   5 `Schema()` and 5 `Pointers()` lines — and nothing else. If
+   any other line moved, the installed `ormc` predates phase B: stop and say so
+   in the PR instead of committing the drift.
 
-```go
-package migrate
+## Acceptance criteria
 
-import (
-	"webtyp.com/ddl"
+1. `go build ./...`, `go vet ./...`, `go test ./...` green.
+2. `grep -rn "List) Schema() \[\]model.Field" --include='*.go' .` → empty.
+3. `grep -rn "List) Pointers()" --include='*.go' .` → empty.
+4. `grep -rnc "Append() model.Fielder" --include='*.go' .` → unchanged from
+   before the change: the traversal contract survived.
+5. `go.mod` requires the phase A tag of `webtyp.com/model`; no `replace`.
+6. `grep -rn "TODO\|FIXME\|Deprecated" --include='*.go' .` → only hits that
+   predate this change.
 
-	devicemanager "github.com/veltylabs/device_manager"
-)
+## Out of scope
 
-// Migrate reconciles the database schema device_manager owns: Device.
-//
-// It is deliberately NOT called by New, and deliberately lives in its own
-// package rather than a new file in the root package: nothing on a
-// consuming app's WASM build path (its view.go, which imports the root
-// devicemanager package for devicemanager.NewView) ever imports
-// "github.com/veltylabs/device_manager/migrate" — so webtyp.com/ddl never
-// enters that build graph, regardless of build tags on the consumer's side.
-//
-// conn is a ddl.Execer, not an *orm.DB, so a deploy-time transport that can
-// only execute DDL satisfies it. An *orm.DB's RawConn() also satisfies it,
-// for local/test callers:
-//
-//	conn, _ := postgres.Open(dsn)
-//	compiler, _ := conn.(ddl.Compiler)
-//	err := migrate.Migrate(conn, compiler)
-func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
-	return ddl.New(conn, ddlCompiler).CreateTable(&devicemanager.Device{})
-}
-```
+- Changing `model.FielderSlice` itself — phase A, already shipped.
+- Changing what `ormc` emits — phase B, already shipped.
+- Removing the `EncodeFields`/`DecodeFields` no-ops — measured and rejected.
+- Any behaviour change in this repo. If a test fails, the cause is upstream:
+  report it, do not paper over it here.
 
-Import path for consumers: `github.com/veltylabs/device_manager/migrate`.
-The root package keeps its existing name (`devicemanager`, see
-`module.go:1`); only the new subdirectory's package is called `migrate`.
-
-### 3. New test file `migrate/migrate_test.go`
-
-This test lives inside the new `migrate/` package directory, next to the
-code — not under the root `tests/` directory, since `migrate` is its own
-package (same convention `webtyp.com/auth/authority` uses for its own
-`migrate_test.go`):
-
-```go
-package migrate_test
-
-import (
-	"testing"
-
-	"github.com/veltylabs/device_manager/migrate"
-	"webtyp.com/ddl"
-	"webtyp.com/model"
-)
-
-type dummyExecer struct{ calls []string }
-
-func (d *dummyExecer) Exec(query string, args ...any) error {
-	d.calls = append(d.calls, query)
-	return nil
-}
-
-type dummyCompiler struct{}
-
-func (d *dummyCompiler) CompileDDL(stmt ddl.Stmt, m model.Model) (string, []any, error) {
-	return stmt.Table, nil, nil
-}
-
-func TestMigrate_CreatesDeviceTable(t *testing.T) {
-	execer := &dummyExecer{}
-	if err := migrate.Migrate(execer, &dummyCompiler{}); err != nil {
-		t.Fatalf("Migrate returned error: %v", err)
-	}
-	if len(execer.calls) != 1 {
-		t.Fatalf("got %d Exec calls, want 1: %v", len(execer.calls), execer.calls)
-	}
-}
-```
-
-### 4. This repo's own `AGENTS.md` — replace the "Persistence" bullet
-
-Replace the current bullet (search for `**Persistence**:`) with this exact
-block (from `DDL_MIGRATE_ISOLATION_MASTER_PLAN.md` §2,
-`https://github.com/webtyp/app-releases/blob/main/docs/DDL_MIGRATE_ISOLATION_MASTER_PLAN.md`):
-
-```markdown
-- **Persistence**: `New(db *orm.DB, deps Deps)` receives an already-connected
-  `*orm.DB` and assumes its schema already exists — it never creates or
-  alters tables, and never imports `webtyp.com/ddl`. Schema reconciliation
-  lives in its own **subpackage**, `<module>/migrate` (`package migrate`),
-  exporting `Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error`.
-  Deliberately not called by `New`, and deliberately not in the module's
-  root package: schema work is deploy-time work, run once from a migration
-  binary (`cmd/migrate` in the composition-root app) — and keeping it in a
-  separate package means nothing on a WASM build's import path (`view.go`,
-  `init.go`, the root package itself) ever pulls `webtyp.com/ddl` into that
-  binary, regardless of build tags.
-  ```go
-  // migrate/migrate.go
-  package migrate
-
-  import (
-      "webtyp.com/ddl"
-
-      thismodule "github.com/veltylabs/<this-module>"
-  )
-
-  func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
-      d := ddl.New(conn, ddlCompiler)
-      if err := d.CreateTable(&thismodule.CatalogItem{}); err != nil {
-          return err
-      }
-      return nil
-  }
-  ```
-  A module's own tests build `*orm.DB` over `storage/mem`
-  (`orm.New(mem.New())`), which creates tables lazily on first `Exec` — they
-  never call `Migrate`, and `New` never needs to type-assert for
-  `ddl.Compiler` at all anymore.
-```
-
-## What this does NOT change
-
-- No change to `Deps`, `Module`, `DeviceFilter`, or any exported method
-  other than the new `Migrate` — every existing caller of `New` keeps
-  compiling unchanged.
-- `storage/mem`-backed tests are unaffected, same reasoning as `item_catalog`.
-- This module stays fully independent — no shared table, no shared
-  `Migrate` call, no import relationship with `item_catalog` or
-  `clinical_encounter`.
-
-## Acceptance
-
-- `grep -n "ddl\." module.go` → empty.
-- `grep -rn "webtyp.com/ddl" *.go` (root package only, not `migrate/`) →
-  empty.
-- `gotest` passes, including `TestMigrate_CreatesDeviceTable`.
-- `grep -n "Persistence" AGENTS.md` shows the new block.
-
-## Stages
-
-| Stage | Files | Done when |
+| Stage | Files | Action |
 |---|---|---|
-| 1 | `module.go` | DDL block removed from `New`, unused `ddl` import dropped |
-| 2 | `migrate/migrate.go` (new package) | `Migrate` implemented exactly as specified, in its own subdirectory |
-| 3 | `migrate/migrate_test.go` (new) | test passes |
-| 4 | `AGENTS.md` | "Persistence" bullet replaced verbatim |
+| 1 | `model_orm.go` | regenerate with `ormc`; 5 stub pairs disappear |
