@@ -111,7 +111,7 @@ func TestMountOperations_CreateDevice_RBACDenial(t *testing.T) {
 func TestView_ListPopulatesItems(t *testing.T) {
 	caller := &fakeCaller{
 		reply: func(op string, into model.Decodable) {
-			if op != devicemanager.OpListDevices {
+			if op != devicemanager.ModelName+"."+devicemanager.OpListDevices {
 				return
 			}
 			list := into.(*devicemanager.DeviceList)
@@ -120,8 +120,10 @@ func TestView_ListPopulatesItems(t *testing.T) {
 		},
 	}
 	p := devicemanager.NewView(caller)
-	if err := p.Reload(); err != nil {
-		t.Fatalf("Reload: %v", err)
+	var rerr error
+	p.Reload(func(err error) { rerr = err })
+	if rerr != nil {
+		t.Fatalf("Reload: %v", rerr)
 	}
 	items := p.Items()
 	if len(items) != 1 || items[0].ID != "dev_1" || items[0].Label != "Pc Recepcion" {

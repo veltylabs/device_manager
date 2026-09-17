@@ -18,7 +18,7 @@ const titleDevices = "Equipos"
 // only); the app decides which renderer draws it.
 func NewView(caller router.Caller) view.Presenter {
 	b := view.NewCallerLister(caller,
-		view.Ops{List: OpListDevices, Save: OpUpsertDevice, Delete: OpDeleteDevice},
+		view.Ops{Module: ModelName, List: OpListDevices, Save: OpUpsertDevice, Delete: OpDeleteDevice},
 		func() model.ModelSlice { return &DeviceList{} })
 	return view.New(b, &Device{}, view.WithTitle(titleDevices))
 }

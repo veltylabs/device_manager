@@ -15,7 +15,13 @@ const (
 	OpDeleteDevice     = "delete_device"
 )
 
-func (m *Module) ModelName() string { return "device_manager" }
+// ModelName is this module's identity: mcp.HarvestOps qualifies every op
+// below as "device_manager.<name>" on the wire, and view.go's NewView passes
+// this same constant as view.Ops.Module so the client composes the identical
+// qualified name.
+const ModelName = "device_manager"
+
+func (m *Module) ModelName() string { return ModelName }
 
 func (m *Module) MountOperations(reg router.OperationRegistry) {
 	reg.Operation(OpListDevices, m.opListDevices).Requires("device", model.Read).Accepts(&ListDevicesArgs{})
