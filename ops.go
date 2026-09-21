@@ -41,8 +41,12 @@ func (m *Module) opListDevices(ctx router.Context) {
 		ctx.WriteStatus(400)
 		return
 	}
+	tenantID := args.TenantId
+	if tenantID == "" {
+		tenantID = m.tenantID
+	}
 	filter := DeviceFilter{Type: args.Type, ActiveOnly: args.ActiveOnly, Limit: args.Limit, Offset: args.Offset}
-	devices, err := m.ListDevices(args.TenantId, filter)
+	devices, err := m.ListDevices(tenantID, filter)
 	if err != nil {
 		ctx.WriteStatus(500)
 		return

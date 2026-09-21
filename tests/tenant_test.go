@@ -10,7 +10,7 @@ import (
 
 func TestTenantIsolation(t *testing.T) {
 	db := orm.New(mem.New())
-	m, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}})
+	m, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, TenantID: "tenant-A"})
 	if err != nil {
 		t.Fatal(err)
 	}

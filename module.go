@@ -12,12 +12,16 @@ import (
 type Deps struct {
 	IDs       model.IDGenerator // required — the module never builds its own
 	Publisher events.Publisher  // optional — nil disables publishing silently
+	TenantID  string            // required — this installation's tenant id, the
+	                            // fallback opListDevices uses when a caller sends
+	                            // no tenant_id (every crudview-backed list does)
 }
 
 type Module struct {
-	db  *orm.DB
-	ids model.IDGenerator
-	pub events.Publisher
+	db       *orm.DB
+	ids      model.IDGenerator
+	pub      events.Publisher
+	tenantID string
 }
 
 // New connects the module to an already-connected *orm.DB; the schema is assumed
@@ -26,7 +30,10 @@ func New(db *orm.DB, deps Deps) (*Module, error) {
 	if deps.IDs == nil {
 		return nil, fmt.Err("device_manager: Deps.IDs is required")
 	}
-	return &Module{db: db, ids: deps.IDs, pub: deps.Publisher}, nil
+	if deps.TenantID == "" {
+		return nil, fmt.Err("device_manager: Deps.TenantID is required")
+	}
+	return &Module{db: db, ids: deps.IDs, pub: deps.Publisher, tenantID: deps.TenantID}, nil
 }
 
 // DeviceFilter narrows ListDevices — a plain internal type, never ormc-generated (only its
