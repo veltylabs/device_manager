@@ -32,7 +32,7 @@ var _ events.Publisher = (*mockPublisher)(nil)
 func setup(t *testing.T) *devicemanager.Module {
 	t.Helper()
 	db := orm.New(mem.New())
-	m, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}})
+	m, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, TenantID: "tenant-A"})
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}

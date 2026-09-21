@@ -10,8 +10,15 @@ import (
 
 func TestNew_RequiresIDs(t *testing.T) {
 	db := orm.New(mem.New())
-	if _, err := devicemanager.New(db, devicemanager.Deps{}); err == nil {
+	if _, err := devicemanager.New(db, devicemanager.Deps{TenantID: "tenant-A"}); err == nil {
 		t.Fatal("expected an error when Deps.IDs is nil")
+	}
+}
+
+func TestNew_RequiresTenantID(t *testing.T) {
+	db := orm.New(mem.New())
+	if _, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}}); err == nil {
+		t.Fatal("expected an error when Deps.TenantID is empty")
 	}
 }
 
@@ -149,7 +156,7 @@ func TestListDevices_FilterByTypeAndActive(t *testing.T) {
 func TestCreateDevice_PublishesEvent(t *testing.T) {
 	db := orm.New(mem.New())
 	pub := &mockPublisher{}
-	m, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, Publisher: pub})
+	m, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, Publisher: pub, TenantID: "tenant-A"})
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
