@@ -2,8 +2,9 @@
 PLAN: "fix: opListDevices has no tenant fallback, so every real list load (which sends no args) returns zero rows"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 9257265402213424410
+PR: https://github.com/veltylabs/device_manager/pull/3
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
