@@ -51,7 +51,7 @@ func Load(m *devicemanager.Module, tenantID string) (Data, error) {
 	for _, d := range devices {
 		created, err := m.CreateDevice(d)
 		if err != nil {
-			return Data{}, fmt.Err("seed Load CreateDevice failed for %s (%s): %w", d.Name, d.Ip, err)
+			return Data{}, fmt.Err("seed: CreateDevice", d.Name, d.Ip, err)
 		}
 		res.Devices = append(res.Devices, created)
 	}
