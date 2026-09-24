@@ -29,6 +29,14 @@ dm.MountOps(opRegistry)    // router.OpRegistry
 view := dm.NewView(caller) // router.Caller -> view.Presenter
 ```
 
+## View and demo
+
+The module exports its own UI screen under `ui/` (`ID = "device_manager"`, `Label = "Equipos"`), accessible via `ui.Browser(caller, ids, tenantID)`.
+
+Demo data can be seeded using `seed.Load(m, tenantID)`.
+
+Run `webtyp` at the repository root to open the demo — in-browser, in-memory, no login.
+
 ## Key files
 
 | File | Purpose |
