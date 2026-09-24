@@ -2,6 +2,8 @@
 PLAN: "feat(ui): la vista de Equipos, su semilla y su demo viven en el módulo; IPLocator para staff_manager"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 12698388074640057900
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
