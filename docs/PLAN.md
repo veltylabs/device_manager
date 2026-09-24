@@ -2,8 +2,9 @@
 PLAN: "feat(ui): la vista de Equipos, su semilla y su demo viven en el módulo; IPLocator para staff_manager"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 12698388074640057900
+PR: https://github.com/veltylabs/device_manager/pull/4
 ---
 
 > Este plan se despacha con el flujo CodeJob. Ver skill: agents-workflow.
