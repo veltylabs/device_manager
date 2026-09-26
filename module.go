@@ -3,6 +3,7 @@ package devicemanager
 import (
 	"webtyp.com/events"
 	"webtyp.com/fmt"
+	"webtyp.com/input"
 	"webtyp.com/model"
 	"webtyp.com/orm"
 	"webtyp.com/time"
@@ -60,9 +61,12 @@ func (m *Module) GetDevice(tenantId, id string) (Device, error) {
 	return d, nil
 }
 
+// FindByIP looks ip up in its canonical spelling (input.CanonicalIP) — the
+// form every device is stored in, and the form webtyp.com/auth's ClientIP
+// reports — so the same machine matches however it connected.
 func (m *Module) FindByIP(tenantId, ip string) (Device, error) {
 	var d Device
-	qb := m.db.Query(&d).Where(Device_.Ip).Eq(ip).Where(Device_.TenantId).Eq(tenantId)
+	qb := m.db.Query(&d).Where(Device_.Ip).Eq(input.CanonicalIP(ip)).Where(Device_.TenantId).Eq(tenantId)
 	_, err := ReadOneDevice(qb, &d)
 	if err != nil {
 		if err == orm.ErrNotFound {
@@ -107,6 +111,7 @@ func isValidDeviceType(t string) bool {
 
 func (m *Module) CreateDevice(d Device) (Device, error) {
 	d.Id = m.ids.NewID()
+	d.Ip = input.CanonicalIP(d.Ip)
 	d.UpdatedAt = time.Now()
 
 	if err := d.Validate(model.ActionCreate); err != nil {
@@ -137,6 +142,7 @@ func (m *Module) CreateDevice(d Device) (Device, error) {
 }
 
 func (m *Module) UpdateDevice(d Device) (Device, error) {
+	d.Ip = input.CanonicalIP(d.Ip)
 	if err := d.Validate(model.ActionUpdate); err != nil {
 		return Device{}, ValidationError{Err: err}
 	}
