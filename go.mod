@@ -28,6 +28,6 @@ require (
 	webtyp.com/form v0.4.19 // indirect
 	webtyp.com/html v0.0.24 // indirect
 	webtyp.com/icons v0.0.7 // indirect
-	webtyp.com/json v0.5.25 // indirect
+	webtyp.com/json v0.5.27 // indirect
 	webtyp.com/widget v0.6.32 // indirect
 )
