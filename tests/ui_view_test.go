@@ -49,8 +49,14 @@ func TestUIView(t *testing.T) {
 		t.Fatal("view does not implement Init method")
 	}
 
+	if len(fake.calls) != 0 {
+		t.Fatal("expected no calls on Init (lazy activation)")
+	}
+
+	mod.Activate()
+
 	if len(fake.calls) == 0 {
-		t.Fatal("expected calls on Init, got none")
+		t.Fatal("expected calls on Activate, got none")
 	}
 
 	lastCall := fake.calls[len(fake.calls)-1]
