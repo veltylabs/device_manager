@@ -29,6 +29,6 @@ require (
 	webtyp.com/form v0.4.22 // indirect
 	webtyp.com/html v0.0.24 // indirect
 	webtyp.com/icons v0.0.7 // indirect
-	webtyp.com/json v0.5.27 // indirect
+	webtyp.com/json v0.5.29 // indirect
 	webtyp.com/widget v0.6.36 // indirect
 )
