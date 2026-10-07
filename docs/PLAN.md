@@ -28,6 +28,9 @@ plan says *where* and *in what order*; ARCHITECTURE says *what*.
 - `webtyp.com/fmt` only (no `errors`/`strings`/`strconv`/stdlib `fmt`), no `map`, no `reflect`.
 - Enum literals only in exported constants; no string literals in logic.
 - Never hand-edit `model_orm.go`: run `ormc` at the repo root.
+- `webtyp.com/orm` queries: inequality is `.Where(X_.Field).Neq(v)` (no `NotEq`); there is **no
+  `Count`** — an existence check is `….Limit(1)` + `ReadAll<Type>` and `len(rows) > 0`; never load a
+  whole table to count. Import `webtyp.com/network` wherever its types are used.
 - Tests in `tests/`, runner `gotest ./...`. Never export a symbol only for tests.
 - **Keep these signatures unchanged** (other modules call them): `New`, `Deps`, `Module.FindByIP`,
   `IPLocator`, `seed.Load(m *Module, tenantID string) (Data, error)`, the existing op names.
