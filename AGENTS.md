@@ -33,6 +33,7 @@ A module's **non-test** Go files may import, from `webtyp.com/*`:
 | `form/input` | `input.Text()`, `input.Number()`, … (`Kind` with a UI widget) | Only when a `model.Definition` field needs a widget for a form; still just a `Kind`, no renderer |
 | `fmt` | string/number/error handling, `Err(...)` | The ecosystem's stdlib replacement — see the stdlib section below |
 | `time` | date/time helpers | The ecosystem's `time` replacement (isomorphic, wasm-safe) |
+| `network` | `Host`/`Access`/`Settings`/`Gateway`/`HostSource`/`HostImporter` | Network-access port: the concrete gateway (`veltylabs/mikrotik`, or `network/mem` in tests) is injected by the app |
 
 **"Port" vs "concrete implementation" is the whole test.** `orm`/`storage`/`ddl` are agnostic — they
 work unchanged against `sqlt`, `postgres`, `mem`, or a future `indexdb` backend, selected by whoever
@@ -51,6 +52,7 @@ calls `orm.New(conn)`. A module importing them does **not** know or care which b
   repo, never to the module.
 - **A concrete transport**: `webtyp/mcp`, `webtyp/server`/`httpd`, or anything importing
   `net/http`. A module speaks `router.OperationModule`; the app decides which transport harvests it.
+- **A concrete network gateway**: `veltylabs/mikrotik` (or any router SDK). Accept `network.Gateway` via `Deps`; tests use `webtyp.com/network/mem`.
 - **A concrete ID generator**: `webtyp/unixid`. Accept `model.IDGenerator` via `Deps` instead —
   never construct one inside the module.
 - **A concrete encoder**: `webtyp/json`, `webtyp/jsvalue`. A module's models implement
@@ -261,14 +263,15 @@ never runs `codejob` or `gopush` itself — dispatch and close are the human's c
 
 ## Domain-specific notes (edit per module — nothing above this line)
 
-- **Domain**: registry of network/office equipment (computers, printers, servers, other) owned per
-  tenant/location — the productionized form of the `webtyp/layout/platformd/modules/devices` demo
-  (`id`/`name`/`ip`), extended with `type`, `location`, `is_active`.
-  - Its `docs/PLAN.md` cites that demo path as UI-shape reference only (not a build-time dependency —
-    `device_manager` never imports `webtyp/layout` or `webtyp/dom`, per the blacklist above).
-- **Owns its schema**: calls `ddl.New(...).CreateTable(&Device{})` in `New()`, same as every other
-  tenant-scoped module. Not a read-only adapter over a legacy table (unlike `work_schedule`).
-- **Tenant-scoped**: every row carries `tenant_id`; IP uniqueness is enforced **per tenant**, not
-  globally (two tenants may register the same private IP range independently).
-- **Publishes events**: `device_manager.device.created` / `.updated` / `.deactivated` / `.deleted` —
-  `Deps.Publisher` optional, `nil` disables silently.
+- **Domain**: inventory of a site's equipment — devices, their network interfaces (MAC + IP), zones
+  (one per access point, with an IP range) and each device's network access level. Source of truth
+  for `veltylabs/network_manager`; never talks to a router. Design: `docs/ARCHITECTURE.md`.
+- **Router boundary**: `NetworkHosts` implements `webtyp.com/network`'s `HostSource` and
+  `HostImporter`. Only interfaces **with a MAC** of active devices become hosts.
+- **Login by IP**: `FindByIP` / `IPLocator` resolve an IP through `network_interface`; their
+  signatures are relied on by `staff_manager`, `appointment_booking`, `clinical_encounter` — keep them.
+  `seed.Load(m, tenantID)` is also called by those modules — keep its signature.
+- **MACs**: canonical (`input.CanonicalMAC`), unique per tenant, randomized ones rejected.
+- **Tenant-scoped**: every row carries `tenant_id`; IP and MAC uniqueness are **per tenant**.
+- **Publishes events**: `device_manager.device.*`, `device_manager.zone.*`,
+  `device_manager.network_interface.*` — `Deps.Publisher` optional, `nil` disables silently.
