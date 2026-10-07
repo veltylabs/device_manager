@@ -272,6 +272,8 @@ never runs `codejob` or `gopush` itself — dispatch and close are the human's c
   signatures are relied on by `staff_manager`, `appointment_booking`, `clinical_encounter` — keep them.
   `seed.Load(m, tenantID)` is also called by those modules — keep its signature.
 - **MACs**: canonical (`input.CanonicalMAC`), unique per tenant, randomized ones rejected.
+- **Custom kinds** (`type`, `access` radios) live in `kinds/`: ormc rejects a kind constructor declared
+  in the package it generates for. Never declare one in the root package again.
 - **Tenant-scoped**: every row carries `tenant_id`; IP and MAC uniqueness are **per tenant**.
 - **Publishes events**: `device_manager.device.*`, `device_manager.zone.*`,
   `device_manager.network_interface.*` — `Deps.Publisher` optional, `nil` disables silently.

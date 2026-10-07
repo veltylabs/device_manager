@@ -3,10 +3,10 @@ package tests
 import (
 	"testing"
 
+	devicemanager "github.com/veltylabs/device_manager"
 	"github.com/veltylabs/device_manager/seed"
 	"webtyp.com/orm"
 	"webtyp.com/storage/mem"
-	devicemanager "github.com/veltylabs/device_manager"
 )
 
 func TestSeedLoad(t *testing.T) {

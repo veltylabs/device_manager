@@ -7,9 +7,11 @@ require (
 	webtyp.com/dom v0.13.21
 	webtyp.com/events v0.0.5
 	webtyp.com/fmt v1.0.0
-	webtyp.com/input v0.0.17
+	webtyp.com/form v0.4.24
+	webtyp.com/input v0.0.18
 	webtyp.com/layout v0.3.29
 	webtyp.com/model v0.2.2
+	webtyp.com/network v0.1.0
 	webtyp.com/orm v0.12.1
 	webtyp.com/router v0.3.2
 	webtyp.com/storage v0.1.1
@@ -26,7 +28,6 @@ require (
 	webtyp.com/date v0.0.9 // indirect
 	webtyp.com/escape v0.1.0 // indirect
 	webtyp.com/font v0.0.5 // indirect
-	webtyp.com/form v0.4.24 // indirect
 	webtyp.com/html v0.0.24 // indirect
 	webtyp.com/icons v0.0.7 // indirect
 	webtyp.com/json v0.5.29 // indirect

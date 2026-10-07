@@ -2,10 +2,11 @@ package tests
 
 import (
 	"testing"
+	"webtyp.com/network"
 
+	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/orm"
 	"webtyp.com/storage/mem"
-	devicemanager "github.com/veltylabs/device_manager"
 )
 
 func TestNew_RequiresIDs(t *testing.T) {
@@ -27,7 +28,6 @@ func TestCreateDevice_HappyPath(t *testing.T) {
 	d, err := m.CreateDevice(devicemanager.Device{
 		TenantId: "tenant-A",
 		Name:     "Pc Recepcion",
-		Ip:       "192.168.1.10",
 		Type:     devicemanager.DeviceTypeComputer,
 		IsActive: true,
 	})
@@ -42,7 +42,7 @@ func TestCreateDevice_HappyPath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDevice: %v", err)
 	}
-	if got.Name != "Pc Recepcion" || got.Ip != "192.168.1.10" {
+	if got.Name != "Pc Recepcion" || got.Access != network.AccessLocalName {
 		t.Fatalf("unexpected device: %+v", got)
 	}
 }
@@ -52,7 +52,6 @@ func TestCreateDevice_InvalidType(t *testing.T) {
 	_, err := m.CreateDevice(devicemanager.Device{
 		TenantId: "tenant-A",
 		Name:     "Bad",
-		Ip:       "192.168.1.11",
 		Type:     "not-a-real-type",
 		IsActive: true,
 	})
@@ -63,11 +62,11 @@ func TestCreateDevice_InvalidType(t *testing.T) {
 
 func TestCreateDevice_DuplicateIPSameTenant(t *testing.T) {
 	m := setup(t)
-	base := devicemanager.Device{TenantId: "tenant-A", Name: "First", Ip: "192.168.1.12", Type: devicemanager.DeviceTypeServer, IsActive: true}
-	if _, err := m.CreateDevice(base); err != nil {
-		t.Fatalf("CreateDevice (first): %v", err)
+	base := devicemanager.Device{TenantId: "tenant-A", Name: "First", Type: devicemanager.DeviceTypeServer, IsActive: true}
+	if _, err := createWithIP(m, base, "192.168.1.12"); err != nil {
+		t.Fatalf("createWithIP (first): %v", err)
 	}
-	_, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Second", Ip: "192.168.1.12", Type: devicemanager.DeviceTypeServer, IsActive: true})
+	_, err := createWithIP(m, devicemanager.Device{TenantId: "tenant-A", Name: "Second", Type: devicemanager.DeviceTypeServer, IsActive: true}, "192.168.1.12")
 	if err != devicemanager.ErrIPAlreadyExists {
 		t.Fatalf("expected ErrIPAlreadyExists, got %v", err)
 	}
@@ -75,17 +74,17 @@ func TestCreateDevice_DuplicateIPSameTenant(t *testing.T) {
 
 func TestCreateDevice_SameIPDifferentTenants_Allowed(t *testing.T) {
 	m := setup(t)
-	if _, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Device A", Ip: "10.0.0.5", Type: devicemanager.DeviceTypePrinter, IsActive: true}); err != nil {
+	if _, err := createWithIP(m, devicemanager.Device{TenantId: "tenant-A", Name: "Device A", Type: devicemanager.DeviceTypePrinter, IsActive: true}, "10.0.0.5"); err != nil {
 		t.Fatalf("CreateDevice tenant-A: %v", err)
 	}
-	if _, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-B", Name: "Device B", Ip: "10.0.0.5", Type: devicemanager.DeviceTypePrinter, IsActive: true}); err != nil {
+	if _, err := createWithIP(m, devicemanager.Device{TenantId: "tenant-B", Name: "Device B", Type: devicemanager.DeviceTypePrinter, IsActive: true}, "10.0.0.5"); err != nil {
 		t.Fatalf("CreateDevice tenant-B (same IP, different tenant): %v", err)
 	}
 }
 
 func TestUpdateDevice_NotFound(t *testing.T) {
 	m := setup(t)
-	_, err := m.UpdateDevice(devicemanager.Device{Id: "does-not-exist", TenantId: "tenant-A", Name: "Device X", Ip: "1.2.3.4", Type: devicemanager.DeviceTypeOther, IsActive: true})
+	_, err := m.UpdateDevice(devicemanager.Device{Id: "does-not-exist", TenantId: "tenant-A", Name: "Device X", Type: devicemanager.DeviceTypeOther, Access: network.AccessLocalName, IsActive: true})
 	if err != devicemanager.ErrNotFound {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
@@ -93,7 +92,7 @@ func TestUpdateDevice_NotFound(t *testing.T) {
 
 func TestDeactivateDevice(t *testing.T) {
 	m := setup(t)
-	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Device X", Ip: "1.2.3.5", Type: devicemanager.DeviceTypeOther, IsActive: true})
+	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Device X", Type: devicemanager.DeviceTypeOther, IsActive: true})
 	if err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
@@ -111,7 +110,7 @@ func TestDeactivateDevice(t *testing.T) {
 
 func TestDeleteDevice(t *testing.T) {
 	m := setup(t)
-	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Device X", Ip: "1.2.3.6", Type: devicemanager.DeviceTypeOther, IsActive: true})
+	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Device X", Type: devicemanager.DeviceTypeOther, IsActive: true})
 	if err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
@@ -125,10 +124,10 @@ func TestDeleteDevice(t *testing.T) {
 
 func TestListDevices_FilterByTypeAndActive(t *testing.T) {
 	m := setup(t)
-	if _, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Srv1", Ip: "10.1.1.1", Type: devicemanager.DeviceTypeServer, IsActive: true}); err != nil {
+	if _, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Srv1", Type: devicemanager.DeviceTypeServer, IsActive: true}); err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
-	pc, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Pc1", Ip: "10.1.1.2", Type: devicemanager.DeviceTypeComputer, IsActive: true})
+	pc, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Pc1", Type: devicemanager.DeviceTypeComputer, IsActive: true})
 	if err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
@@ -160,7 +159,7 @@ func TestCreateDevice_PublishesEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Device X", Ip: "1.2.3.7", Type: devicemanager.DeviceTypeOther, IsActive: true})
+	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Device X", Type: devicemanager.DeviceTypeOther, IsActive: true})
 	if err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}

@@ -1,8 +1,5 @@
 # Device Manager Architecture
 
-> STATUS (remove this note when the "network interfaces, zones and access" plan lands): this document
-> already describes the target model — `Device` without `ip`, plus `Zone` and `NetworkInterface`.
-
 ## Domain Scope
 
 `device_manager` owns the **inventory of a site's equipment** (computers, printers, servers, other):
@@ -34,13 +31,18 @@ apps use for login from the local network.
   - An interface **without MAC** still identifies its device for login by IP, but is **not** sent to
     the router: only interfaces with a MAC become `network.Host`s.
 
+Closed-option kinds (`type`, `access` radios) live in the `kinds` subpackage: ormc resolves a field
+kind by compiling its constructor, which it only imports from a package of its own. The root package
+re-exports the type names (`DeviceTypeComputer` = `kinds.TypeComputer`, …).
+
 ## Network boundary (`webtyp.com/network`)
 
 - `NetworkHosts{Devices, TenantID}` implements `network.HostSource`: one `network.Host` per interface
   with a MAC of an **active** device — `Name` = `"<device name> (<label>)"`, `Access` = the device's.
 - The same type implements `network.HostImporter`: creates a device (type `other`, access `internet`
   if the router granted it Internet by hand, else `local`, zone = the zone whose range contains the
-  IP) plus one interface (`label` = `imported`) per discovered MAC. Skipped, with a reason: no MAC,
+  IP) plus one interface (`label` = `imported`) per discovered MAC. An entry without a router comment
+is named `Imported <MAC with '-' separators>` (`:` is not allowed in a name). Skipped, with a reason: no MAC,
   no IP, randomized MAC, MAC already registered, or a name that fails validation.
 
 ## Patterns

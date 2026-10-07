@@ -3,9 +3,9 @@ package tests
 import (
 	"testing"
 
+	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/orm"
 	"webtyp.com/storage/mem"
-	devicemanager "github.com/veltylabs/device_manager"
 )
 
 func TestTenantIsolation(t *testing.T) {
@@ -18,13 +18,12 @@ func TestTenantIsolation(t *testing.T) {
 	tenantA := "tenant-A"
 	tenantB := "tenant-B"
 
-	created, err := m.CreateDevice(devicemanager.Device{
+	created, err := createWithIP(m, devicemanager.Device{
 		TenantId: tenantA,
 		Name:     "Tenant A Device",
-		Ip:       "172.16.0.1",
 		Type:     devicemanager.DeviceTypeComputer,
 		IsActive: true,
-	})
+	}, "172.16.0.1")
 	if err != nil {
 		t.Fatalf("failed to create tenant A device: %v", err)
 	}
@@ -53,7 +52,7 @@ func TestTenantIsolation(t *testing.T) {
 	}
 
 	// 5. Tenant B registering the SAME ip as tenant A must be allowed (uniqueness is per tenant)
-	if _, err := m.CreateDevice(devicemanager.Device{TenantId: tenantB, Name: "Tenant B Device", Ip: "172.16.0.1", Type: devicemanager.DeviceTypeComputer, IsActive: true}); err != nil {
+	if _, err := createWithIP(m, devicemanager.Device{TenantId: tenantB, Name: "Tenant B Device", Type: devicemanager.DeviceTypeComputer, IsActive: true}, "172.16.0.1"); err != nil {
 		t.Errorf("expected tenant B to reuse tenant A's ip independently, got %v", err)
 	}
 }

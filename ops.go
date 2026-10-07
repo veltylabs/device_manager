@@ -13,6 +13,13 @@ const (
 	OpUpsertDevice     = "upsert_device"
 	OpDeactivateDevice = "deactivate_device"
 	OpDeleteDevice     = "delete_device"
+
+	OpListZones              = "list_zones"
+	OpSaveZone               = "save_zone"
+	OpDeleteZone             = "delete_zone"
+	OpListNetworkInterfaces  = "list_network_interfaces"
+	OpSaveNetworkInterface   = "save_network_interface"
+	OpDeleteNetworkInterface = "delete_network_interface"
 )
 
 // ModelName is this module's identity: mcp.HarvestOps qualifies every op
@@ -24,13 +31,19 @@ const ModelName = "device_manager"
 func (m *Module) ModelName() string { return ModelName }
 
 func (m *Module) MountOperations(reg router.OperationRegistry) {
-	reg.Operation(OpListDevices, m.opListDevices).Requires("device", model.Read).Accepts(&ListDevicesArgs{})
-	reg.Operation(OpGetDevice, m.opGetDevice).Requires("device", model.Read).Accepts(&GetDeviceArgs{})
-	reg.Operation(OpCreateDevice, m.opCreateDevice).Requires("device", model.Create).Accepts(&Device{})
-	reg.Operation(OpUpdateDevice, m.opUpdateDevice).Requires("device", model.Update).Accepts(&Device{})
-	reg.Operation(OpUpsertDevice, m.opUpsertDevice).Requires("device", model.Create|model.Update).Accepts(&Device{})
-	reg.Operation(OpDeactivateDevice, m.opDeactivateDevice).Requires("device", model.Update).Accepts(&DeactivateDeviceArgs{})
-	reg.Operation(OpDeleteDevice, m.opDeleteDevice).Requires("device", model.Delete).Accepts(&DeleteDeviceArgs{})
+	reg.Operation(OpListDevices, m.opListDevices).Requires(ResourceDevice, model.Read).Accepts(&ListDevicesArgs{})
+	reg.Operation(OpGetDevice, m.opGetDevice).Requires(ResourceDevice, model.Read).Accepts(&GetDeviceArgs{})
+	reg.Operation(OpCreateDevice, m.opCreateDevice).Requires(ResourceDevice, model.Create).Accepts(&Device{})
+	reg.Operation(OpUpdateDevice, m.opUpdateDevice).Requires(ResourceDevice, model.Update).Accepts(&Device{})
+	reg.Operation(OpUpsertDevice, m.opUpsertDevice).Requires(ResourceDevice, model.Create|model.Update).Accepts(&Device{})
+	reg.Operation(OpDeactivateDevice, m.opDeactivateDevice).Requires(ResourceDevice, model.Update).Accepts(&DeactivateDeviceArgs{})
+	reg.Operation(OpDeleteDevice, m.opDeleteDevice).Requires(ResourceDevice, model.Delete).Accepts(&DeleteDeviceArgs{})
+	reg.Operation(OpListZones, m.opListZones).Requires(ResourceZone, model.Read).Accepts(&ListZonesArgs{})
+	reg.Operation(OpSaveZone, m.opSaveZone).Requires(ResourceZone, model.Create|model.Update).Accepts(&Zone{})
+	reg.Operation(OpDeleteZone, m.opDeleteZone).Requires(ResourceZone, model.Delete).Accepts(&DeleteZoneArgs{})
+	reg.Operation(OpListNetworkInterfaces, m.opListNetworkInterfaces).Requires(ResourceNetworkInterface, model.Read).Accepts(&ListNetworkInterfacesArgs{})
+	reg.Operation(OpSaveNetworkInterface, m.opSaveNetworkInterface).Requires(ResourceNetworkInterface, model.Create|model.Update).Accepts(&NetworkInterface{})
+	reg.Operation(OpDeleteNetworkInterface, m.opDeleteNetworkInterface).Requires(ResourceNetworkInterface, model.Delete).Accepts(&DeleteNetworkInterfaceArgs{})
 }
 
 var _ router.OperationModule = (*Module)(nil)
@@ -183,6 +196,130 @@ func (m *Module) opDeleteDevice(ctx router.Context) {
 		} else {
 			ctx.WriteStatus(500)
 		}
+		return
+	}
+	ctx.WriteStatus(200)
+}
+
+// statusFor maps a zone/interface service error to its HTTP status (AGENTS.md
+// convention): the one place these sentinels are classified.
+func statusFor(err error) int {
+	if _, ok := err.(ValidationError); ok {
+		return 400
+	}
+	switch err {
+	case ErrNotFound, ErrZoneNotFound, ErrInterfaceNotFound:
+		return 404
+	case ErrIPAlreadyExists, ErrMACAlreadyExists, ErrZoneOverlap, ErrZoneInUse, ErrZoneFull:
+		return 409
+	}
+	return 500
+}
+
+// tenantOr returns id, or the installation's tenant when the caller sent none
+// (every crudview-backed form does) — same fallback as opListDevices.
+func (m *Module) tenantOr(id string) string {
+	if id == "" {
+		return m.tenantID
+	}
+	return id
+}
+
+func (m *Module) opListZones(ctx router.Context) {
+	var args ListZonesArgs
+	if err := ctx.Decode(&args); err != nil {
+		ctx.WriteStatus(400)
+		return
+	}
+	zones, err := m.ListZones(m.tenantOr(args.TenantId))
+	if err != nil {
+		ctx.WriteStatus(500)
+		return
+	}
+	list := make(ZoneList, len(zones))
+	for i := range zones {
+		list[i] = &zones[i]
+	}
+	if err := ctx.Encode(&list); err != nil {
+		ctx.WriteStatus(500)
+	}
+}
+
+func (m *Module) opSaveZone(ctx router.Context) {
+	var z Zone
+	if err := ctx.Decode(&z); err != nil {
+		ctx.WriteStatus(400)
+		return
+	}
+	z.TenantId = m.tenantOr(z.TenantId)
+	saved, err := m.SaveZone(z)
+	if err != nil {
+		ctx.WriteStatus(statusFor(err))
+		return
+	}
+	if err := ctx.Encode(&saved); err != nil {
+		ctx.WriteStatus(500)
+	}
+}
+
+func (m *Module) opDeleteZone(ctx router.Context) {
+	var args DeleteZoneArgs
+	if err := ctx.Decode(&args); err != nil {
+		ctx.WriteStatus(400)
+		return
+	}
+	if err := m.DeleteZone(m.tenantOr(args.TenantId), args.Id); err != nil {
+		ctx.WriteStatus(statusFor(err))
+		return
+	}
+	ctx.WriteStatus(200)
+}
+
+func (m *Module) opListNetworkInterfaces(ctx router.Context) {
+	var args ListNetworkInterfacesArgs
+	if err := ctx.Decode(&args); err != nil {
+		ctx.WriteStatus(400)
+		return
+	}
+	ifaces, err := m.ListNetworkInterfaces(m.tenantOr(args.TenantId), args.DeviceId)
+	if err != nil {
+		ctx.WriteStatus(500)
+		return
+	}
+	list := make(NetworkInterfaceList, len(ifaces))
+	for i := range ifaces {
+		list[i] = &ifaces[i]
+	}
+	if err := ctx.Encode(&list); err != nil {
+		ctx.WriteStatus(500)
+	}
+}
+
+func (m *Module) opSaveNetworkInterface(ctx router.Context) {
+	var ni NetworkInterface
+	if err := ctx.Decode(&ni); err != nil {
+		ctx.WriteStatus(400)
+		return
+	}
+	ni.TenantId = m.tenantOr(ni.TenantId)
+	saved, err := m.SaveNetworkInterface(ni)
+	if err != nil {
+		ctx.WriteStatus(statusFor(err))
+		return
+	}
+	if err := ctx.Encode(&saved); err != nil {
+		ctx.WriteStatus(500)
+	}
+}
+
+func (m *Module) opDeleteNetworkInterface(ctx router.Context) {
+	var args DeleteNetworkInterfaceArgs
+	if err := ctx.Decode(&args); err != nil {
+		ctx.WriteStatus(400)
+		return
+	}
+	if err := m.DeleteNetworkInterface(m.tenantOr(args.TenantId), args.Id); err != nil {
+		ctx.WriteStatus(statusFor(err))
 		return
 	}
 	ctx.WriteStatus(200)

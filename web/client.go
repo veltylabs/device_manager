@@ -47,11 +47,19 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	zones, err := ui.ZonesBrowser(caller, ids, demoTenantID)
+	if err != nil {
+		panic(err)
+	}
+	ifaces, err := ui.InterfacesBrowser(caller, ids, demoTenantID)
+	if err != nil {
+		panic(err)
+	}
 
 	p := &platformd.Platform{
 		AppName:   ui.Label + " — demo",
 		User:      demoUser{},
-		Modules:   []platformd.UIModule{v},
+		Modules:   []platformd.UIModule{v, zones, ifaces},
 		DefaultID: ui.ID,
 	}
 	Append("body", p)

@@ -3,11 +3,11 @@ package tests
 import (
 	"testing"
 
+	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/model"
 	"webtyp.com/router"
 	"webtyp.com/router/mock"
 	"webtyp.com/view"
-	devicemanager "github.com/veltylabs/device_manager"
 )
 
 type fakeCaller struct {
@@ -116,7 +116,7 @@ func TestView_ListPopulatesItems(t *testing.T) {
 			}
 			list := into.(*devicemanager.DeviceList)
 			rec := list.Append().(*devicemanager.Device)
-			rec.Id, rec.Name, rec.Ip = "dev_1", "Pc Recepcion", "192.168.1.30"
+			rec.Id, rec.Name = "dev_1", "Pc Recepcion"
 		},
 	}
 	p := devicemanager.NewView(caller)

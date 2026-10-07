@@ -2,16 +2,15 @@
 
 ```mermaid
 flowchart TD
-    A[device]
-    A --> B[id: string PK]
-    A --> C[tenant_id: string NOT NULL]
-    A --> D[name: string NOT NULL]
-    A --> E[ip: string NOT NULL]
-    A --> F[type: string NOT NULL<br/>computer / printer / server / other]
-    A --> G[location: string nullable]
-    A --> H[is_active: bool NOT NULL]
-    A --> I[updated_at: int64 nullable<br/>Unix timestamp]
+    Z[zone<br/>id PK · tenant_id · name<br/>range_start · range_end IPv4 · updated_at]
+    D[device<br/>id PK · tenant_id · name · type<br/>location · zone_id · access · is_active · updated_at]
+    N[network_interface<br/>id PK · tenant_id · device_id FK<br/>label · mac · ip · updated_at]
+    D -. zone_id soft reference, may be empty .-> Z
+    N -->|device_id FK| D
 ```
 
-> IP uniqueness is enforced per `tenant_id` in the service layer (`Module.CreateDevice`), not as a
-> DB constraint.
+- `device.type`: `computer` / `printer` / `server` / `other`.
+- `device.access`: `local` / `internet_filtered` / `internet` (`webtyp.com/network` names).
+- `network_interface.mac`: optional, canonical, unique per tenant when present; randomized MACs rejected.
+- `network_interface.ip`: unique per tenant; auto-assigned from the device's zone when empty.
+- Uniqueness and range rules are enforced in the service layer, per `tenant_id`, not as DB constraints.

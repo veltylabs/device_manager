@@ -3,12 +3,12 @@ package tests
 import (
 	"testing"
 
+	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/model"
 	"webtyp.com/orm"
 	"webtyp.com/router"
 	"webtyp.com/router/mock"
 	"webtyp.com/storage/mem"
-	devicemanager "github.com/veltylabs/device_manager"
 )
 
 // TestOpListDevices_FallsBackToModuleTenant reproduces a real bug found while
@@ -49,7 +49,6 @@ func TestOpListDevices_FallsBackToModuleTenant(t *testing.T) {
 	seeded, err := m.CreateDevice(devicemanager.Device{
 		TenantId: moduleTenant,
 		Name:     "Front Desk PC",
-		Ip:       "192.168.1.50",
 		Type:     devicemanager.DeviceTypeComputer,
 		IsActive: true,
 	})

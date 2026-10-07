@@ -3,9 +3,9 @@ package tests
 import (
 	"testing"
 
+	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/orm"
 	"webtyp.com/storage/mem"
-	devicemanager "github.com/veltylabs/device_manager"
 )
 
 func TestIPLocator(t *testing.T) {
@@ -17,25 +17,23 @@ func TestIPLocator(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	d1, err := dm.CreateDevice(devicemanager.Device{
+	d1, err := createWithIP(dm, devicemanager.Device{
 		TenantId: "tenant-1",
 		Name:     "Box 1",
-		Ip:       "192.168.1.10",
 		Type:     devicemanager.DeviceTypeComputer,
 		IsActive: true,
-	})
+	}, "192.168.1.10")
 	if err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
 
 	// Create device with same IP on another tenant
-	_, err = dm.CreateDevice(devicemanager.Device{
+	_, err = createWithIP(dm, devicemanager.Device{
 		TenantId: "tenant-2",
 		Name:     "Box 1 Tenant 2",
-		Ip:       "192.168.1.10",
 		Type:     devicemanager.DeviceTypeComputer,
 		IsActive: true,
-	})
+	}, "192.168.1.10")
 	if err != nil {
 		t.Fatalf("CreateDevice tenant-2: %v", err)
 	}
@@ -80,18 +78,18 @@ func TestIPLocator_CanonicalSpelling(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 
-	d, err := dm.CreateDevice(devicemanager.Device{
+	d, err := createWithIP(dm, devicemanager.Device{
 		TenantId: "tenant-1",
 		Name:     "Admin",
-		Ip:       "::1",
 		Type:     devicemanager.DeviceTypeComputer,
 		IsActive: true,
-	})
+	}, "::1")
 	if err != nil {
-		t.Fatalf("CreateDevice: %v", err)
+		t.Fatalf("createWithIP: %v", err)
 	}
-	if d.Ip != "127.0.0.1" {
-		t.Errorf("stored Ip = %q, want %q", d.Ip, "127.0.0.1")
+	ifaces, err := dm.ListNetworkInterfaces("tenant-1", d.Id)
+	if err != nil || len(ifaces) != 1 || ifaces[0].Ip != "127.0.0.1" {
+		t.Errorf("stored interface = %+v (err %v), want one with Ip %q", ifaces, err, "127.0.0.1")
 	}
 
 	locator := devicemanager.IPLocator{Devices: dm, TenantID: "tenant-1"}
@@ -101,13 +99,12 @@ func TestIPLocator_CanonicalSpelling(t *testing.T) {
 		}
 	}
 
-	_, err = dm.CreateDevice(devicemanager.Device{
+	_, err = createWithIP(dm, devicemanager.Device{
 		TenantId: "tenant-1",
 		Name:     "Admin again",
-		Ip:       "127.0.0.1",
 		Type:     devicemanager.DeviceTypeComputer,
 		IsActive: true,
-	})
+	}, "127.0.0.1")
 	if err != devicemanager.ErrIPAlreadyExists {
 		t.Errorf("CreateDevice same machine, other spelling: err = %v, want ErrIPAlreadyExists", err)
 	}

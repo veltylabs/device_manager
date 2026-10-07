@@ -6,7 +6,8 @@ import (
 	devicemanager "github.com/veltylabs/device_manager"
 )
 
-// Migrate reconciles the database schema device_manager owns: Device.
+// Migrate reconciles the database schema device_manager owns: Zone, Device,
+// NetworkInterface.
 //
 // It is deliberately NOT called by New, and deliberately lives in its own
 // package rather than a new file in the root package: nothing on a
@@ -23,5 +24,13 @@ import (
 //	compiler, _ := conn.(ddl.Compiler)
 //	err := migrate.Migrate(conn, compiler)
 func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
-	return ddl.New(conn, ddlCompiler).CreateTable(&devicemanager.Device{})
+	d := ddl.New(conn, ddlCompiler)
+	// FK order: network_interface.device_id references device.id.
+	if err := d.CreateTable(&devicemanager.Zone{}); err != nil {
+		return err
+	}
+	if err := d.CreateTable(&devicemanager.Device{}); err != nil {
+		return err
+	}
+	return d.CreateTable(&devicemanager.NetworkInterface{})
 }

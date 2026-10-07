@@ -3,12 +3,12 @@ package tests
 import (
 	"testing"
 
+	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/events"
 	"webtyp.com/fmt"
 	"webtyp.com/model"
 	"webtyp.com/orm"
 	"webtyp.com/storage/mem"
-	devicemanager "github.com/veltylabs/device_manager"
 )
 
 type mockIDGen struct{ counter int }
@@ -37,4 +37,18 @@ func setup(t *testing.T) *devicemanager.Module {
 		t.Fatalf("New: %v", err)
 	}
 	return m
+}
+
+// testIfaceLabel is the label of the single interface createWithIP adds.
+const testIfaceLabel = "lan"
+
+// createWithIP creates d and gives it one interface with ip — what the tests
+// written before interfaces existed meant by "a device with an IP".
+func createWithIP(m *devicemanager.Module, d devicemanager.Device, ip string) (devicemanager.Device, error) {
+	created, err := m.CreateDevice(d)
+	if err != nil {
+		return devicemanager.Device{}, err
+	}
+	_, err = m.SaveNetworkInterface(devicemanager.NetworkInterface{TenantId: d.TenantId, DeviceId: created.Id, Label: testIfaceLabel, Ip: ip})
+	return created, err
 }

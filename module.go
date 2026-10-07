@@ -5,6 +5,7 @@ import (
 	"webtyp.com/fmt"
 	"webtyp.com/input"
 	"webtyp.com/model"
+	"webtyp.com/network"
 	"webtyp.com/orm"
 	"webtyp.com/time"
 )
@@ -14,8 +15,8 @@ type Deps struct {
 	IDs       model.IDGenerator // required — the module never builds its own
 	Publisher events.Publisher  // optional — nil disables publishing silently
 	TenantID  string            // required — this installation's tenant id, the
-	                            // fallback opListDevices uses when a caller sends
-	                            // no tenant_id (every crudview-backed list does)
+	// fallback opListDevices uses when a caller sends
+	// no tenant_id (every crudview-backed list does)
 }
 
 type Module struct {
@@ -61,20 +62,20 @@ func (m *Module) GetDevice(tenantId, id string) (Device, error) {
 	return d, nil
 }
 
-// FindByIP looks ip up in its canonical spelling (input.CanonicalIP) — the
-// form every device is stored in, and the form webtyp.com/auth's ClientIP
+// FindByIP looks ip up in its canonical spelling (input.CanonicalIP) among the
+// tenant's network interfaces and returns the device that owns it — the form
+// every interface is stored in, and the form webtyp.com/auth's ClientIP
 // reports — so the same machine matches however it connected.
 func (m *Module) FindByIP(tenantId, ip string) (Device, error) {
-	var d Device
-	qb := m.db.Query(&d).Where(Device_.Ip).Eq(input.CanonicalIP(ip)).Where(Device_.TenantId).Eq(tenantId)
-	_, err := ReadOneDevice(qb, &d)
-	if err != nil {
+	var ni NetworkInterface
+	qb := m.db.Query(&ni).Where(NetworkInterface_.Ip).Eq(input.CanonicalIP(ip)).Where(NetworkInterface_.TenantId).Eq(tenantId)
+	if _, err := ReadOneNetworkInterface(qb, &ni); err != nil {
 		if err == orm.ErrNotFound {
 			return Device{}, ErrNotFound
 		}
 		return Device{}, err
 	}
-	return d, nil
+	return m.GetDevice(tenantId, ni.DeviceId)
 }
 
 func (m *Module) ListDevices(tenantId string, filter DeviceFilter) ([]Device, error) {
@@ -109,29 +110,37 @@ func isValidDeviceType(t string) bool {
 	return t == DeviceTypeComputer || t == DeviceTypePrinter || t == DeviceTypeServer || t == DeviceTypeOther
 }
 
-func (m *Module) CreateDevice(d Device) (Device, error) {
-	d.Id = m.ids.NewID()
-	d.Ip = input.CanonicalIP(d.Ip)
-	d.UpdatedAt = time.Now()
-
-	if err := d.Validate(model.ActionCreate); err != nil {
-		return Device{}, ValidationError{Err: err}
+// validateDevice runs every check a device write needs, before the write.
+func (m *Module) validateDevice(d Device, action byte) error {
+	if err := d.Validate(action); err != nil {
+		return ValidationError{Err: err}
 	}
 	if !isValidDeviceType(d.Type) {
-		return Device{}, ValidationError{Err: fmt.Err("invalid device type: %s", d.Type)}
+		return ValidationError{Err: fmt.Err("invalid device type: %s", d.Type)}
 	}
-
-	// IP uniqueness is enforced per tenant, not globally — two tenants may reuse the same
-	// private IP range independently.
-	existing, err := m.FindByIP(d.TenantId, d.Ip)
-	if err == nil {
-		if existing.Id != "" {
-			return Device{}, ErrIPAlreadyExists
+	if _, err := network.ParseAccess(d.Access); err != nil {
+		return ValidationError{Err: err}
+	}
+	if d.ZoneId != "" {
+		if _, err := m.GetZone(d.TenantId, d.ZoneId); err != nil {
+			if err == ErrZoneNotFound {
+				return ValidationError{Err: err}
+			}
+			return err
 		}
-	} else if err != ErrNotFound {
+	}
+	return nil
+}
+
+func (m *Module) CreateDevice(d Device) (Device, error) {
+	d.Id = m.ids.NewID()
+	if d.Access == "" {
+		d.Access = network.AccessLocalName
+	}
+	d.UpdatedAt = time.Now()
+	if err := m.validateDevice(d, model.ActionCreate); err != nil {
 		return Device{}, err
 	}
-
 	if err := m.db.Create(&d); err != nil {
 		return Device{}, err
 	}
@@ -142,19 +151,13 @@ func (m *Module) CreateDevice(d Device) (Device, error) {
 }
 
 func (m *Module) UpdateDevice(d Device) (Device, error) {
-	d.Ip = input.CanonicalIP(d.Ip)
-	if err := d.Validate(model.ActionUpdate); err != nil {
-		return Device{}, ValidationError{Err: err}
+	if err := m.validateDevice(d, model.ActionUpdate); err != nil {
+		return Device{}, err
 	}
-	if !isValidDeviceType(d.Type) {
-		return Device{}, ValidationError{Err: fmt.Err("invalid device type: %s", d.Type)}
-	}
-
 	// Verify the device exists and belongs to this tenant before writing.
 	if _, err := m.GetDevice(d.TenantId, d.Id); err != nil {
 		return Device{}, err
 	}
-
 	d.UpdatedAt = time.Now()
 	if err := m.db.Update(&d, orm.Eq(Device_.Id, d.Id), orm.Eq(Device_.TenantId, d.TenantId)); err != nil {
 		return Device{}, err
@@ -185,6 +188,16 @@ func (m *Module) DeleteDevice(tenantId, id string) error {
 	d, err := m.GetDevice(tenantId, id)
 	if err != nil {
 		return err
+	}
+	// Its interfaces first: network_interface.device_id references device.id.
+	ifaces, err := m.ListNetworkInterfaces(tenantId, id)
+	if err != nil {
+		return err
+	}
+	for _, ni := range ifaces {
+		if err := m.DeleteNetworkInterface(tenantId, ni.Id); err != nil {
+			return err
+		}
 	}
 	if err := m.db.Delete(&d, orm.Eq(Device_.Id, d.Id), orm.Eq(Device_.TenantId, d.TenantId)); err != nil {
 		return err

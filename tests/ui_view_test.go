@@ -3,6 +3,7 @@ package tests
 import (
 	"testing"
 
+	devicemanager "github.com/veltylabs/device_manager"
 	"github.com/veltylabs/device_manager/ui"
 	"webtyp.com/dom"
 	"webtyp.com/model"
@@ -63,5 +64,62 @@ func TestUIView(t *testing.T) {
 	expectedSuffix := ui.ID + ".list_devices"
 	if len(lastCall) < len(expectedSuffix) || lastCall[len(lastCall)-len(expectedSuffix):] != expectedSuffix {
 		t.Errorf("expected call ending with %q, got %q", expectedSuffix, lastCall)
+	}
+}
+
+// The select options are loaded on ACTIVATION (never at creation, never at
+// Init), once: a second activation does not ask for the zones again.
+func TestUIView_ZoneOptionsLoadOnFirstActivation(t *testing.T) {
+	fake := &uiFakeCaller{}
+	mod, err := ui.Browser(fake, &mockIDGen{}, "tenant-test")
+	if err != nil {
+		t.Fatalf("ui.Browser: %v", err)
+	}
+	zonesOp := devicemanager.ModelName + "." + devicemanager.OpListZones
+	count := func() int {
+		n := 0
+		for _, c := range fake.calls {
+			if c == zonesOp {
+				n++
+			}
+		}
+		return n
+	}
+	if len(fake.calls) != 0 {
+		t.Fatalf("calls before activation: %v", fake.calls)
+	}
+	mod.Activate()
+	if count() != 1 {
+		t.Fatalf("list_zones calls after first Activate = %d, want 1 (calls %v)", count(), fake.calls)
+	}
+	mod.Activate()
+	if count() != 1 {
+		t.Errorf("list_zones called again on second Activate (calls %v)", fake.calls)
+	}
+}
+
+func TestUIView_ExtraScreens(t *testing.T) {
+	fake := &uiFakeCaller{}
+	zones, err := ui.ZonesBrowser(fake, &mockIDGen{}, "tenant-test")
+	if err != nil || zones.ModelName() != ui.ZonesID {
+		t.Fatalf("ZonesBrowser = %v (err %v)", zones, err)
+	}
+	ifaces, err := ui.InterfacesBrowser(fake, &mockIDGen{}, "tenant-test")
+	if err != nil || ifaces.ModelName() != ui.InterfacesID {
+		t.Fatalf("InterfacesBrowser = %v (err %v)", ifaces, err)
+	}
+	if len(fake.calls) != 0 {
+		t.Fatalf("calls at creation: %v", fake.calls)
+	}
+	ifaces.Activate()
+	devicesOp := devicemanager.ModelName + "." + devicemanager.OpListDevices
+	found := false
+	for _, c := range fake.calls {
+		if c == devicesOp {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("InterfacesBrowser activation did not load the device options (calls %v)", fake.calls)
 	}
 }
