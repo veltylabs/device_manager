@@ -122,7 +122,11 @@ func (n NetworkHosts) ImportHosts(found []network.Discovered) (network.ImportRes
 			if delErr := n.Devices.DeleteDevice(n.TenantID, dev.Id); delErr != nil {
 				return res, delErr
 			}
-			if _, isValidation := err.(ValidationError); isValidation || err == ErrIPAlreadyExists {
+			if _, isValidation := err.(ValidationError); isValidation {
+				skip(err.Error())
+				continue
+			}
+			if e, ok := err.(domainError); ok && e == ErrIPAlreadyExists {
 				skip(err.Error())
 				continue
 			}

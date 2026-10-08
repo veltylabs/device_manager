@@ -2,8 +2,9 @@
 PLAN: "fix: detect sentinel errors without == between interfaces (no reflection in wasm)"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 4927859980396477989
+PR: https://github.com/veltylabs/device_manager/pull/5
 ---
 
 # Plan — `device_manager`: errores centinela sin `==` entre interfaces
@@ -147,3 +148,6 @@ lista, se migra igual. `x == nil` y `x != nil` están bien.
 
 Las de `AGENTS.md`, más: nada de `reflect`, `unsafe`, `errors.Is`/`errors.As`, ni `==`/`!=`/`switch`
 entre valores de interfaz con operandos no nil. No tocar otros repos.
+
+## Executor notes
+All conversions implemented as stated in the plan without any unresolvable issues or deviations. I eliminated `err == ErrX` patterns and switched to the custom `domainError` type in production code, wrapped with `if e, ok := err.(domainError); ok { ... }`. For tests, I added a helper to ensure interface equality does not compile. Tests and linters are fully green.

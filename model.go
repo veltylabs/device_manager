@@ -1,7 +1,6 @@
 package devicemanager
 
 import (
-	"webtyp.com/fmt"
 	"webtyp.com/input"
 	"webtyp.com/model"
 
@@ -151,19 +150,23 @@ const (
 	ImportedInterfaceLabel   = "imported"
 )
 
-var (
-	ErrNotFound          = fmt.Err("device not found")
-	ErrIPAlreadyExists   = fmt.Err("device ip already exists")
-	ErrMACAlreadyExists  = fmt.Err("network interface mac already exists")
-	ErrRandomizedMAC     = fmt.Err("randomized MAC address: on the device, turn off random (private) hardware addresses for this Wi-Fi network and register its real MAC")
-	ErrNoZone            = fmt.Err("ip is empty and the device has no zone to assign one from")
-	ErrIPOutsideZone     = fmt.Err("ip is outside the device's zone range")
-	ErrZoneFull          = fmt.Err("zone has no free ip")
-	ErrZoneOverlap       = fmt.Err("zone range overlaps another zone")
-	ErrZoneInUse         = fmt.Err("zone is used by a device")
-	ErrZoneNotFound      = fmt.Err("zone not found")
-	ErrInterfaceNotFound = fmt.Err("network interface not found")
-	ErrInvalidZoneRange  = fmt.Err("zone range must be two IPv4 addresses with start <= end")
+type domainError string
+
+func (e domainError) Error() string { return string(e) }
+
+const (
+	ErrNotFound          domainError = "device not found"
+	ErrIPAlreadyExists   domainError = "device ip already exists"
+	ErrMACAlreadyExists  domainError = "network interface mac already exists"
+	ErrRandomizedMAC     domainError = "randomized MAC address: on the device, turn off random (private) hardware addresses for this Wi-Fi network and register its real MAC"
+	ErrNoZone            domainError = "ip is empty and the device has no zone to assign one from"
+	ErrIPOutsideZone     domainError = "ip is outside the device's zone range"
+	ErrZoneFull          domainError = "zone has no free ip"
+	ErrZoneOverlap       domainError = "zone range overlaps another zone"
+	ErrZoneInUse         domainError = "zone is used by a device"
+	ErrZoneNotFound      domainError = "zone not found"
+	ErrInterfaceNotFound domainError = "network interface not found"
+	ErrInvalidZoneRange  domainError = "zone range must be two IPv4 addresses with start <= end"
 )
 
 type ValidationError struct{ Err error }

@@ -12,7 +12,7 @@ func (m *Module) GetNetworkInterface(tenantId, id string) (NetworkInterface, err
 	var ni NetworkInterface
 	qb := m.db.Query(&ni).Where(NetworkInterface_.Id).Eq(id).Where(NetworkInterface_.TenantId).Eq(tenantId)
 	if _, err := ReadOneNetworkInterface(qb, &ni); err != nil {
-		if err == orm.ErrNotFound {
+		if orm.IsNotFound(err) {
 			return NetworkInterface{}, ErrInterfaceNotFound
 		}
 		return NetworkInterface{}, err

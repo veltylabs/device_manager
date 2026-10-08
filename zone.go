@@ -12,7 +12,7 @@ func (m *Module) GetZone(tenantId, id string) (Zone, error) {
 	var z Zone
 	qb := m.db.Query(&z).Where(Zone_.Id).Eq(id).Where(Zone_.TenantId).Eq(tenantId)
 	if _, err := ReadOneZone(qb, &z); err != nil {
-		if err == orm.ErrNotFound {
+		if orm.IsNotFound(err) {
 			return Zone{}, ErrZoneNotFound
 		}
 		return Zone{}, err

@@ -27,7 +27,7 @@ func TestZone_SaveListDelete(t *testing.T) {
 	if err := m.DeleteZone("tenant-A", z.Id); err != nil {
 		t.Fatalf("DeleteZone: %v", err)
 	}
-	if _, err := m.GetZone("tenant-A", z.Id); err != devicemanager.ErrZoneNotFound {
+	if _, err := m.GetZone("tenant-A", z.Id); !isErr(err, devicemanager.ErrZoneNotFound) {
 		t.Fatalf("GetZone after delete: err = %v, want ErrZoneNotFound", err)
 	}
 }
@@ -52,7 +52,7 @@ func TestZone_Overlap(t *testing.T) {
 		t.Fatalf("SaveZone: %v", err)
 	}
 	overlap := devicemanager.Zone{TenantId: "tenant-A", Name: "overlap", RangeStart: "172.0.0.65", RangeEnd: "172.0.0.79"}
-	if _, err := m.SaveZone(overlap); err != devicemanager.ErrZoneOverlap {
+	if _, err := m.SaveZone(overlap); !isErr(err, devicemanager.ErrZoneOverlap) {
 		t.Fatalf("overlapping zone: err = %v, want ErrZoneOverlap", err)
 	}
 	// Same range in another tenant is fine: zones are per tenant.
@@ -67,7 +67,7 @@ func TestZone_DeleteInUse(t *testing.T) {
 	if _, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "PC 1", Type: devicemanager.DeviceTypeComputer, ZoneId: z.Id, IsActive: true}); err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
-	if err := m.DeleteZone("tenant-A", z.Id); err != devicemanager.ErrZoneInUse {
+	if err := m.DeleteZone("tenant-A", z.Id); !isErr(err, devicemanager.ErrZoneInUse) {
 		t.Fatalf("DeleteZone in use: err = %v, want ErrZoneInUse", err)
 	}
 }
@@ -75,15 +75,15 @@ func TestZone_DeleteInUse(t *testing.T) {
 func TestZone_TenantIsolation(t *testing.T) {
 	m := setup(t)
 	z, _ := m.SaveZone(zoneAP06("tenant-A"))
-	if _, err := m.GetZone("tenant-B", z.Id); err != devicemanager.ErrZoneNotFound {
+	if _, err := m.GetZone("tenant-B", z.Id); !isErr(err, devicemanager.ErrZoneNotFound) {
 		t.Errorf("tenant B read tenant A's zone: err = %v", err)
 	}
-	if err := m.DeleteZone("tenant-B", z.Id); err != devicemanager.ErrZoneNotFound {
+	if err := m.DeleteZone("tenant-B", z.Id); !isErr(err, devicemanager.ErrZoneNotFound) {
 		t.Errorf("tenant B deleted tenant A's zone: err = %v", err)
 	}
 	hijack := z
 	hijack.TenantId = "tenant-B"
-	if _, err := m.SaveZone(hijack); err != devicemanager.ErrZoneNotFound {
+	if _, err := m.SaveZone(hijack); !isErr(err, devicemanager.ErrZoneNotFound) {
 		t.Errorf("tenant B updated tenant A's zone: err = %v", err)
 	}
 }

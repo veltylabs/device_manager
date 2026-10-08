@@ -81,7 +81,7 @@ func (m *Module) opGetDevice(ctx router.Context) {
 	}
 	d, err := m.GetDevice(args.TenantId, args.Id)
 	if err != nil {
-		if err == ErrNotFound {
+		if e, ok := err.(domainError); ok && e == ErrNotFound {
 			ctx.WriteStatus(404)
 		} else {
 			ctx.WriteStatus(500)
@@ -103,7 +103,7 @@ func (m *Module) opCreateDevice(ctx router.Context) {
 	if err != nil {
 		if _, ok := err.(ValidationError); ok {
 			ctx.WriteStatus(400)
-		} else if err == ErrIPAlreadyExists {
+		} else if e, ok := err.(domainError); ok && e == ErrIPAlreadyExists {
 			ctx.WriteStatus(409)
 		} else {
 			ctx.WriteStatus(500)
@@ -125,7 +125,7 @@ func (m *Module) opUpdateDevice(ctx router.Context) {
 	if err != nil {
 		if _, ok := err.(ValidationError); ok {
 			ctx.WriteStatus(400)
-		} else if err == ErrNotFound {
+		} else if e, ok := err.(domainError); ok && e == ErrNotFound {
 			ctx.WriteStatus(404)
 		} else {
 			ctx.WriteStatus(500)
@@ -153,9 +153,9 @@ func (m *Module) opUpsertDevice(ctx router.Context) {
 	if err != nil {
 		if _, ok := err.(ValidationError); ok {
 			ctx.WriteStatus(400)
-		} else if err == ErrIPAlreadyExists {
+		} else if e, ok := err.(domainError); ok && e == ErrIPAlreadyExists {
 			ctx.WriteStatus(409)
-		} else if err == ErrNotFound {
+		} else if e, ok := err.(domainError); ok && e == ErrNotFound {
 			ctx.WriteStatus(404)
 		} else {
 			ctx.WriteStatus(500)
@@ -174,7 +174,7 @@ func (m *Module) opDeactivateDevice(ctx router.Context) {
 		return
 	}
 	if err := m.DeactivateDevice(args.TenantId, args.Id); err != nil {
-		if err == ErrNotFound {
+		if e, ok := err.(domainError); ok && e == ErrNotFound {
 			ctx.WriteStatus(404)
 		} else {
 			ctx.WriteStatus(500)
@@ -191,7 +191,7 @@ func (m *Module) opDeleteDevice(ctx router.Context) {
 		return
 	}
 	if err := m.DeleteDevice(args.TenantId, args.Id); err != nil {
-		if err == ErrNotFound {
+		if e, ok := err.(domainError); ok && e == ErrNotFound {
 			ctx.WriteStatus(404)
 		} else {
 			ctx.WriteStatus(500)
@@ -207,11 +207,13 @@ func statusFor(err error) int {
 	if _, ok := err.(ValidationError); ok {
 		return 400
 	}
-	switch err {
-	case ErrNotFound, ErrZoneNotFound, ErrInterfaceNotFound:
-		return 404
-	case ErrIPAlreadyExists, ErrMACAlreadyExists, ErrZoneOverlap, ErrZoneInUse, ErrZoneFull:
-		return 409
+	if e, ok := err.(domainError); ok {
+		switch e {
+		case ErrNotFound, ErrZoneNotFound, ErrInterfaceNotFound:
+			return 404
+		case ErrIPAlreadyExists, ErrMACAlreadyExists, ErrZoneOverlap, ErrZoneInUse, ErrZoneFull:
+			return 409
+		}
 	}
 	return 500
 }

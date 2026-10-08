@@ -105,7 +105,7 @@ func TestIPLocator_CanonicalSpelling(t *testing.T) {
 		Type:     devicemanager.DeviceTypeComputer,
 		IsActive: true,
 	}, "127.0.0.1")
-	if err != devicemanager.ErrIPAlreadyExists {
+	if !isErr(err, devicemanager.ErrIPAlreadyExists) {
 		t.Errorf("CreateDevice same machine, other spelling: err = %v, want ErrIPAlreadyExists", err)
 	}
 }
