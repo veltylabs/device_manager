@@ -1,3 +1,4 @@
+// Root test: statusFor is unexported; tests/ can only reach the public API.
 package devicemanager
 
 import "testing"
