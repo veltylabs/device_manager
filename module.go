@@ -54,7 +54,7 @@ func (m *Module) GetDevice(tenantId, id string) (Device, error) {
 	if err != nil {
 		// Never hide a real DB failure as "not found" — only orm.ErrNotFound maps to the domain
 		// sentinel; anything else surfaces as the internal error it is.
-		if err == orm.ErrNotFound {
+		if orm.IsNotFound(err) {
 			return Device{}, ErrNotFound
 		}
 		return Device{}, err
@@ -70,7 +70,7 @@ func (m *Module) FindByIP(tenantId, ip string) (Device, error) {
 	var ni NetworkInterface
 	qb := m.db.Query(&ni).Where(NetworkInterface_.Ip).Eq(input.CanonicalIP(ip)).Where(NetworkInterface_.TenantId).Eq(tenantId)
 	if _, err := ReadOneNetworkInterface(qb, &ni); err != nil {
-		if err == orm.ErrNotFound {
+		if orm.IsNotFound(err) {
 			return Device{}, ErrNotFound
 		}
 		return Device{}, err
@@ -123,7 +123,7 @@ func (m *Module) validateDevice(d Device, action byte) error {
 	}
 	if d.ZoneId != "" {
 		if _, err := m.GetZone(d.TenantId, d.ZoneId); err != nil {
-			if err == ErrZoneNotFound {
+			if e, ok := err.(domainError); ok && e == ErrZoneNotFound {
 				return ValidationError{Err: err}
 			}
 			return err

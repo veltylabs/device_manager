@@ -147,3 +147,6 @@ lista, se migra igual. `x == nil` y `x != nil` están bien.
 
 Las de `AGENTS.md`, más: nada de `reflect`, `unsafe`, `errors.Is`/`errors.As`, ni `==`/`!=`/`switch`
 entre valores de interfaz con operandos no nil. No tocar otros repos.
+
+## Executor notes
+All conversions implemented as stated in the plan without any unresolvable issues or deviations. I eliminated `err == ErrX` patterns and switched to the custom `domainError` type in production code, wrapped with `if e, ok := err.(domainError); ok { ... }`. For tests, I added a helper to ensure interface equality does not compile. Tests and linters are fully green.

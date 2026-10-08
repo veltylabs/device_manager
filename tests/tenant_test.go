@@ -29,7 +29,7 @@ func TestTenantIsolation(t *testing.T) {
 	}
 
 	// 1. Tenant B must NOT be able to Get tenant A's device
-	if _, err := m.GetDevice(tenantB, created.Id); err != devicemanager.ErrNotFound {
+	if _, err := m.GetDevice(tenantB, created.Id); !isErr(err, devicemanager.ErrNotFound) {
 		t.Errorf("expected ErrNotFound for tenant B getting tenant A's device, got %v", err)
 	}
 
@@ -37,17 +37,17 @@ func TestTenantIsolation(t *testing.T) {
 	hijack := created
 	hijack.TenantId = tenantB
 	hijack.Name = "Hijacked Name"
-	if _, err := m.UpdateDevice(hijack); err != devicemanager.ErrNotFound {
+	if _, err := m.UpdateDevice(hijack); !isErr(err, devicemanager.ErrNotFound) {
 		t.Errorf("expected ErrNotFound for tenant B updating tenant A's device, got %v", err)
 	}
 
 	// 3. Tenant B must NOT be able to Deactivate tenant A's device
-	if err := m.DeactivateDevice(tenantB, created.Id); err != devicemanager.ErrNotFound {
+	if err := m.DeactivateDevice(tenantB, created.Id); !isErr(err, devicemanager.ErrNotFound) {
 		t.Errorf("expected ErrNotFound for tenant B deactivating tenant A's device, got %v", err)
 	}
 
 	// 4. Tenant B must NOT be able to Delete tenant A's device
-	if err := m.DeleteDevice(tenantB, created.Id); err != devicemanager.ErrNotFound {
+	if err := m.DeleteDevice(tenantB, created.Id); !isErr(err, devicemanager.ErrNotFound) {
 		t.Errorf("expected ErrNotFound for tenant B deleting tenant A's device, got %v", err)
 	}
 

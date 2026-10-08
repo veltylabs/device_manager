@@ -67,7 +67,7 @@ func TestCreateDevice_DuplicateIPSameTenant(t *testing.T) {
 		t.Fatalf("createWithIP (first): %v", err)
 	}
 	_, err := createWithIP(m, devicemanager.Device{TenantId: "tenant-A", Name: "Second", Type: devicemanager.DeviceTypeServer, IsActive: true}, "192.168.1.12")
-	if err != devicemanager.ErrIPAlreadyExists {
+	if !isErr(err, devicemanager.ErrIPAlreadyExists) {
 		t.Fatalf("expected ErrIPAlreadyExists, got %v", err)
 	}
 }
@@ -85,7 +85,7 @@ func TestCreateDevice_SameIPDifferentTenants_Allowed(t *testing.T) {
 func TestUpdateDevice_NotFound(t *testing.T) {
 	m := setup(t)
 	_, err := m.UpdateDevice(devicemanager.Device{Id: "does-not-exist", TenantId: "tenant-A", Name: "Device X", Type: devicemanager.DeviceTypeOther, Access: network.AccessLocalName, IsActive: true})
-	if err != devicemanager.ErrNotFound {
+	if !isErr(err, devicemanager.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -117,7 +117,7 @@ func TestDeleteDevice(t *testing.T) {
 	if err := m.DeleteDevice("tenant-A", d.Id); err != nil {
 		t.Fatalf("DeleteDevice: %v", err)
 	}
-	if _, err := m.GetDevice("tenant-A", d.Id); err != devicemanager.ErrNotFound {
+	if _, err := m.GetDevice("tenant-A", d.Id); !isErr(err, devicemanager.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound after delete, got %v", err)
 	}
 }

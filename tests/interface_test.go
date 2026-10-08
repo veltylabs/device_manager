@@ -54,7 +54,7 @@ func TestInterface_ZoneFull(t *testing.T) {
 	if _, err := m.SaveNetworkInterface(iface(d, "lan a", "", "")); err != nil {
 		t.Fatalf("first: %v", err)
 	}
-	if _, err := m.SaveNetworkInterface(iface(d, "lan b", "", "")); err != devicemanager.ErrZoneFull {
+	if _, err := m.SaveNetworkInterface(iface(d, "lan b", "", "")); !isErr(err, devicemanager.ErrZoneFull) {
 		t.Fatalf("second in a full zone: err = %v, want ErrZoneFull", err)
 	}
 }
@@ -99,7 +99,7 @@ func TestInterface_MACRules(t *testing.T) {
 	if _, err := m.SaveNetworkInterface(iface(d, "wifi2", "4A:C5:93:7A:12:DE", "")); !isValidation(err, devicemanager.ErrRandomizedMAC) {
 		t.Errorf("randomized MAC: err = %v, want ValidationError{ErrRandomizedMAC}", err)
 	}
-	if _, err := m.SaveNetworkInterface(iface(d, "dup", "48:F1:7F:D9:D7:B7", "")); err != devicemanager.ErrMACAlreadyExists {
+	if _, err := m.SaveNetworkInterface(iface(d, "dup", "48:F1:7F:D9:D7:B7", "")); !isErr(err, devicemanager.ErrMACAlreadyExists) {
 		t.Errorf("duplicate MAC: err = %v, want ErrMACAlreadyExists", err)
 	}
 	// Updating the same interface with its own MAC is not a duplicate.
