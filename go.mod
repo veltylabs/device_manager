@@ -33,5 +33,5 @@ require (
 	webtyp.com/json v0.5.29 // indirect
 	webtyp.com/lang v0.1.3 // indirect
 	webtyp.com/msgtype v0.1.0 // indirect
-	webtyp.com/widget v0.6.37 // indirect
+	webtyp.com/widget v0.6.38 // indirect
 )
