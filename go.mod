@@ -7,7 +7,7 @@ require (
 	webtyp.com/dom v0.13.26
 	webtyp.com/events v0.0.5
 	webtyp.com/fmt v1.0.0
-	webtyp.com/form v0.4.34
+	webtyp.com/form v0.4.41
 	webtyp.com/input v0.0.20
 	webtyp.com/layout v0.3.48
 	webtyp.com/model v0.2.3
