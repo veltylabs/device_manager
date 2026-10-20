@@ -34,14 +34,14 @@ var DeviceModel = model.Definition{
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, OmitEmpty: true},
 		{Name: "tenant_id", Type: model.Text(), NotNull: true},
-		{Name: "name", Type: input.Text(), NotNull: true, Permitted: namePermitted(255)},
-		{Name: "type", Type: kinds.DeviceType(), NotNull: true},
-		{Name: "location", Type: input.Text(), OmitEmpty: true, Permitted: model.Permitted{Maximum: 255}},
+		{Name: "name", Type: input.Text(), Label: "Name", NotNull: true, Permitted: namePermitted(255)},
+		{Name: "type", Type: kinds.DeviceType(), Label: "Type", NotNull: true},
+		{Name: "location", Type: input.Text(), Label: "Location", OmitEmpty: true, Permitted: model.Permitted{Maximum: 255}},
 		// Soft reference (no Ref): an empty zone_id must not become an FK violation.
 		// The UI fills its options (ui/browser.go).
-		{Name: "zone_id", Type: input.Select(), OmitEmpty: true},
-		{Name: "access", Type: kinds.DeviceAccess(), NotNull: true},
-		{Name: "is_active", Type: input.Checkbox(), NotNull: true},
+		{Name: "zone_id", Type: input.Select(), Label: "Zone", OmitEmpty: true},
+		{Name: "access", Type: kinds.DeviceAccess(), Label: "Access", NotNull: true},
+		{Name: "is_active", Type: input.Checkbox(), Label: "Active", NotNull: true},
 		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true},
 	},
 }
@@ -52,9 +52,9 @@ var ZoneModel = model.Definition{
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, OmitEmpty: true},
 		{Name: "tenant_id", Type: model.Text(), NotNull: true},
-		{Name: "name", Type: input.Text(), NotNull: true, Permitted: namePermitted(64)},
-		{Name: "range_start", Type: input.IP(), NotNull: true},
-		{Name: "range_end", Type: input.IP(), NotNull: true},
+		{Name: "name", Type: input.Text(), Label: "Name", NotNull: true, Permitted: namePermitted(64)},
+		{Name: "range_start", Type: input.IP(), Label: "Range start", NotNull: true},
+		{Name: "range_end", Type: input.IP(), Label: "Range end", NotNull: true},
 		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true},
 	},
 }
@@ -67,10 +67,10 @@ var NetworkInterfaceModel = model.Definition{
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, OmitEmpty: true},
 		{Name: "tenant_id", Type: model.Text(), NotNull: true},
-		{Name: "device_id", Type: input.Select(), NotNull: true, Ref: &DeviceModel, DB: &model.FieldDB{RefColumn: "id"}},
-		{Name: "label", Type: input.Text(), NotNull: true, Permitted: model.Permitted{Minimum: 1, Maximum: 32}},
-		{Name: "mac", Type: input.MAC(), OmitEmpty: true},
-		{Name: "ip", Type: input.IP(), OmitEmpty: true},
+		{Name: "device_id", Type: input.Select(), Label: "Device", NotNull: true, Ref: &DeviceModel, DB: &model.FieldDB{RefColumn: "id"}},
+		{Name: "label", Type: input.Text(), Label: "Label", NotNull: true, Permitted: model.Permitted{Minimum: 1, Maximum: 32}},
+		{Name: "mac", Type: input.MAC(), Label: "MAC address", OmitEmpty: true},
+		{Name: "ip", Type: input.IP(), Label: "IP address", OmitEmpty: true},
 		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true},
 	},
 }
