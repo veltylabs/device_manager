@@ -2,8 +2,10 @@
 PLAN: "refactor: typed instants of webtyp/time v0.6 in device_manager — every instant field is time.Unix or time.Nano, no unit arithmetic"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 16036784952001531588
+PR: https://github.com/veltylabs/device_manager/pull/6
+REVIEWED_COMMIT: 105b46ea49650a75d46d38f5333abd32e174ee38
 ---
 
 > Read AGENTS.md at the repo root before any change. This plan is complete: do not guess; if something does not fit, stop and ask in the PR.
