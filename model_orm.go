@@ -5,58 +5,87 @@ package devicemanager
 import (
 	"webtyp.com/model"
 	"webtyp.com/orm"
+	"webtyp.com/time"
 )
 
 type Device struct {
-	Id string
-	TenantId string
-	Name string
-	Type string
-	Location string
-	ZoneId string
-	Access string
-	IsActive bool
-	UpdatedAt int64
+	Id        string
+	TenantId  string
+	Name      string
+	Type      string
+	Location  string
+	ZoneId    string
+	Access    string
+	IsActive  bool
+	UpdatedAt time.Nano
 }
 
 func (m *Device) ModelName() string { return "device" }
 
 func (m *Device) Schema() []model.Field { return DeviceModel.Fields }
 
-func (m *Device) Pointers() []any { return []any{&m.Id, &m.TenantId, &m.Name, &m.Type, &m.Location, &m.ZoneId, &m.Access, &m.IsActive, &m.UpdatedAt} }
+func (m *Device) Pointers() []any {
+	return []any{&m.Id, &m.TenantId, &m.Name, &m.Type, &m.Location, &m.ZoneId, &m.Access, &m.IsActive, (*int64)(&m.UpdatedAt)}
+}
 
 func (m *Device) IsNil() bool { return m == nil }
 
 func (m *Device) EncodeFields(w model.FieldWriter) {
-	if m.Id != "" { w.String("id", m.Id) }
+	if m.Id != "" {
+		w.String("id", m.Id)
+	}
 	w.String("tenant_id", m.TenantId)
 	w.String("name", m.Name)
 	w.String("type", m.Type)
-	if m.Location != "" { w.String("location", m.Location) }
-	if m.ZoneId != "" { w.String("zone_id", m.ZoneId) }
+	if m.Location != "" {
+		w.String("location", m.Location)
+	}
+	if m.ZoneId != "" {
+		w.String("zone_id", m.ZoneId)
+	}
 	w.String("access", m.Access)
 	w.Bool("is_active", m.IsActive)
-	if m.UpdatedAt != 0 { w.Int("updated_at", m.UpdatedAt) }
+	if m.UpdatedAt != 0 {
+		w.Int("updated_at", int64(m.UpdatedAt))
+	}
 }
 
 func (m *Device) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("id"); ok { m.Id = v }
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
-	if v, ok := r.String("name"); ok { m.Name = v }
-	if v, ok := r.String("type"); ok { m.Type = v }
-	if v, ok := r.String("location"); ok { m.Location = v }
-	if v, ok := r.String("zone_id"); ok { m.ZoneId = v }
-	if v, ok := r.String("access"); ok { m.Access = v }
-	if v, ok := r.Bool("is_active"); ok { m.IsActive = v }
-	if v, ok := r.Int("updated_at"); ok { m.UpdatedAt = v }
+	if v, ok := r.String("id"); ok {
+		m.Id = v
+	}
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
+	if v, ok := r.String("name"); ok {
+		m.Name = v
+	}
+	if v, ok := r.String("type"); ok {
+		m.Type = v
+	}
+	if v, ok := r.String("location"); ok {
+		m.Location = v
+	}
+	if v, ok := r.String("zone_id"); ok {
+		m.ZoneId = v
+	}
+	if v, ok := r.String("access"); ok {
+		m.Access = v
+	}
+	if v, ok := r.Bool("is_active"); ok {
+		m.IsActive = v
+	}
+	if v, ok := r.Int("updated_at"); ok {
+		m.UpdatedAt = time.Nano(v)
+	}
 }
 
 type DeviceList []*Device
 
-func (s *DeviceList) Len() int             { return len(*s) }
-func (s *DeviceList) At(i int) model.Fielder { return (*s)[i] }
-func (s *DeviceList) Append() model.Fielder  { v := &Device{}; *s = append(*s, v); return v }
-func (s *DeviceList) IsNil() bool          { return s == nil }
+func (s *DeviceList) Len() int                         { return len(*s) }
+func (s *DeviceList) At(i int) model.Fielder           { return (*s)[i] }
+func (s *DeviceList) Append() model.Fielder            { v := &Device{}; *s = append(*s, v); return v }
+func (s *DeviceList) IsNil() bool                      { return s == nil }
 func (s *DeviceList) EncodeFields(_ model.FieldWriter) {}
 func (s *DeviceList) DecodeFields(_ model.FieldReader) {}
 
@@ -65,24 +94,24 @@ func (m *Device) Validate(action byte) error {
 }
 
 var Device_ = struct {
-	Id string
-	TenantId string
-	Name string
-	Type string
-	Location string
-	ZoneId string
-	Access string
-	IsActive string
+	Id        string
+	TenantId  string
+	Name      string
+	Type      string
+	Location  string
+	ZoneId    string
+	Access    string
+	IsActive  string
 	UpdatedAt string
 }{
-	Id: "id",
-	TenantId: "tenant_id",
-	Name: "name",
-	Type: "type",
-	Location: "location",
-	ZoneId: "zone_id",
-	Access: "access",
-	IsActive: "is_active",
+	Id:        "id",
+	TenantId:  "tenant_id",
+	Name:      "name",
+	Type:      "type",
+	Location:  "location",
+	ZoneId:    "zone_id",
+	Access:    "access",
+	IsActive:  "is_active",
 	UpdatedAt: "updated_at",
 }
 
@@ -104,46 +133,64 @@ func ReadAllDevice(qb *orm.QB) (DeviceList, error) {
 }
 
 type Zone struct {
-	Id string
-	TenantId string
-	Name string
+	Id         string
+	TenantId   string
+	Name       string
 	RangeStart string
-	RangeEnd string
-	UpdatedAt int64
+	RangeEnd   string
+	UpdatedAt  time.Nano
 }
 
 func (m *Zone) ModelName() string { return "zone" }
 
 func (m *Zone) Schema() []model.Field { return ZoneModel.Fields }
 
-func (m *Zone) Pointers() []any { return []any{&m.Id, &m.TenantId, &m.Name, &m.RangeStart, &m.RangeEnd, &m.UpdatedAt} }
+func (m *Zone) Pointers() []any {
+	return []any{&m.Id, &m.TenantId, &m.Name, &m.RangeStart, &m.RangeEnd, (*int64)(&m.UpdatedAt)}
+}
 
 func (m *Zone) IsNil() bool { return m == nil }
 
 func (m *Zone) EncodeFields(w model.FieldWriter) {
-	if m.Id != "" { w.String("id", m.Id) }
+	if m.Id != "" {
+		w.String("id", m.Id)
+	}
 	w.String("tenant_id", m.TenantId)
 	w.String("name", m.Name)
 	w.String("range_start", m.RangeStart)
 	w.String("range_end", m.RangeEnd)
-	if m.UpdatedAt != 0 { w.Int("updated_at", m.UpdatedAt) }
+	if m.UpdatedAt != 0 {
+		w.Int("updated_at", int64(m.UpdatedAt))
+	}
 }
 
 func (m *Zone) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("id"); ok { m.Id = v }
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
-	if v, ok := r.String("name"); ok { m.Name = v }
-	if v, ok := r.String("range_start"); ok { m.RangeStart = v }
-	if v, ok := r.String("range_end"); ok { m.RangeEnd = v }
-	if v, ok := r.Int("updated_at"); ok { m.UpdatedAt = v }
+	if v, ok := r.String("id"); ok {
+		m.Id = v
+	}
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
+	if v, ok := r.String("name"); ok {
+		m.Name = v
+	}
+	if v, ok := r.String("range_start"); ok {
+		m.RangeStart = v
+	}
+	if v, ok := r.String("range_end"); ok {
+		m.RangeEnd = v
+	}
+	if v, ok := r.Int("updated_at"); ok {
+		m.UpdatedAt = time.Nano(v)
+	}
 }
 
 type ZoneList []*Zone
 
-func (s *ZoneList) Len() int             { return len(*s) }
-func (s *ZoneList) At(i int) model.Fielder { return (*s)[i] }
-func (s *ZoneList) Append() model.Fielder  { v := &Zone{}; *s = append(*s, v); return v }
-func (s *ZoneList) IsNil() bool          { return s == nil }
+func (s *ZoneList) Len() int                         { return len(*s) }
+func (s *ZoneList) At(i int) model.Fielder           { return (*s)[i] }
+func (s *ZoneList) Append() model.Fielder            { v := &Zone{}; *s = append(*s, v); return v }
+func (s *ZoneList) IsNil() bool                      { return s == nil }
 func (s *ZoneList) EncodeFields(_ model.FieldWriter) {}
 func (s *ZoneList) DecodeFields(_ model.FieldReader) {}
 
@@ -152,19 +199,19 @@ func (m *Zone) Validate(action byte) error {
 }
 
 var Zone_ = struct {
-	Id string
-	TenantId string
-	Name string
+	Id         string
+	TenantId   string
+	Name       string
 	RangeStart string
-	RangeEnd string
-	UpdatedAt string
+	RangeEnd   string
+	UpdatedAt  string
 }{
-	Id: "id",
-	TenantId: "tenant_id",
-	Name: "name",
+	Id:         "id",
+	TenantId:   "tenant_id",
+	Name:       "name",
 	RangeStart: "range_start",
-	RangeEnd: "range_end",
-	UpdatedAt: "updated_at",
+	RangeEnd:   "range_end",
+	UpdatedAt:  "updated_at",
 }
 
 func ReadOneZone(qb *orm.QB, model *Zone) (*Zone, error) {
@@ -185,49 +232,77 @@ func ReadAllZone(qb *orm.QB) (ZoneList, error) {
 }
 
 type NetworkInterface struct {
-	Id string
-	TenantId string
-	DeviceId string
-	Label string
-	Mac string
-	Ip string
-	UpdatedAt int64
+	Id        string
+	TenantId  string
+	DeviceId  string
+	Label     string
+	Mac       string
+	Ip        string
+	UpdatedAt time.Nano
 }
 
 func (m *NetworkInterface) ModelName() string { return "network_interface" }
 
 func (m *NetworkInterface) Schema() []model.Field { return NetworkInterfaceModel.Fields }
 
-func (m *NetworkInterface) Pointers() []any { return []any{&m.Id, &m.TenantId, &m.DeviceId, &m.Label, &m.Mac, &m.Ip, &m.UpdatedAt} }
+func (m *NetworkInterface) Pointers() []any {
+	return []any{&m.Id, &m.TenantId, &m.DeviceId, &m.Label, &m.Mac, &m.Ip, (*int64)(&m.UpdatedAt)}
+}
 
 func (m *NetworkInterface) IsNil() bool { return m == nil }
 
 func (m *NetworkInterface) EncodeFields(w model.FieldWriter) {
-	if m.Id != "" { w.String("id", m.Id) }
+	if m.Id != "" {
+		w.String("id", m.Id)
+	}
 	w.String("tenant_id", m.TenantId)
 	w.String("device_id", m.DeviceId)
 	w.String("label", m.Label)
-	if m.Mac != "" { w.String("mac", m.Mac) }
-	if m.Ip != "" { w.String("ip", m.Ip) }
-	if m.UpdatedAt != 0 { w.Int("updated_at", m.UpdatedAt) }
+	if m.Mac != "" {
+		w.String("mac", m.Mac)
+	}
+	if m.Ip != "" {
+		w.String("ip", m.Ip)
+	}
+	if m.UpdatedAt != 0 {
+		w.Int("updated_at", int64(m.UpdatedAt))
+	}
 }
 
 func (m *NetworkInterface) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("id"); ok { m.Id = v }
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
-	if v, ok := r.String("device_id"); ok { m.DeviceId = v }
-	if v, ok := r.String("label"); ok { m.Label = v }
-	if v, ok := r.String("mac"); ok { m.Mac = v }
-	if v, ok := r.String("ip"); ok { m.Ip = v }
-	if v, ok := r.Int("updated_at"); ok { m.UpdatedAt = v }
+	if v, ok := r.String("id"); ok {
+		m.Id = v
+	}
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
+	if v, ok := r.String("device_id"); ok {
+		m.DeviceId = v
+	}
+	if v, ok := r.String("label"); ok {
+		m.Label = v
+	}
+	if v, ok := r.String("mac"); ok {
+		m.Mac = v
+	}
+	if v, ok := r.String("ip"); ok {
+		m.Ip = v
+	}
+	if v, ok := r.Int("updated_at"); ok {
+		m.UpdatedAt = time.Nano(v)
+	}
 }
 
 type NetworkInterfaceList []*NetworkInterface
 
-func (s *NetworkInterfaceList) Len() int             { return len(*s) }
+func (s *NetworkInterfaceList) Len() int               { return len(*s) }
 func (s *NetworkInterfaceList) At(i int) model.Fielder { return (*s)[i] }
-func (s *NetworkInterfaceList) Append() model.Fielder  { v := &NetworkInterface{}; *s = append(*s, v); return v }
-func (s *NetworkInterfaceList) IsNil() bool          { return s == nil }
+func (s *NetworkInterfaceList) Append() model.Fielder {
+	v := &NetworkInterface{}
+	*s = append(*s, v)
+	return v
+}
+func (s *NetworkInterfaceList) IsNil() bool                      { return s == nil }
 func (s *NetworkInterfaceList) EncodeFields(_ model.FieldWriter) {}
 func (s *NetworkInterfaceList) DecodeFields(_ model.FieldReader) {}
 
@@ -236,20 +311,20 @@ func (m *NetworkInterface) Validate(action byte) error {
 }
 
 var NetworkInterface_ = struct {
-	Id string
-	TenantId string
-	DeviceId string
-	Label string
-	Mac string
-	Ip string
+	Id        string
+	TenantId  string
+	DeviceId  string
+	Label     string
+	Mac       string
+	Ip        string
 	UpdatedAt string
 }{
-	Id: "id",
-	TenantId: "tenant_id",
-	DeviceId: "device_id",
-	Label: "label",
-	Mac: "mac",
-	Ip: "ip",
+	Id:        "id",
+	TenantId:  "tenant_id",
+	DeviceId:  "device_id",
+	Label:     "label",
+	Mac:       "mac",
+	Ip:        "ip",
 	UpdatedAt: "updated_at",
 }
 
@@ -277,18 +352,20 @@ func (m *NetworkInterface) SchemaExt() []model.FieldExt {
 }
 
 type ListDevicesArgs struct {
-	TenantId string
-	Type string
+	TenantId   string
+	Type       string
 	ActiveOnly bool
-	Limit int64
-	Offset int64
+	Limit      int64
+	Offset     int64
 }
 
 func (m *ListDevicesArgs) ModelName() string { return "list_devices_args" }
 
 func (m *ListDevicesArgs) Schema() []model.Field { return ListDevicesArgsModel.Fields }
 
-func (m *ListDevicesArgs) Pointers() []any { return []any{&m.TenantId, &m.Type, &m.ActiveOnly, &m.Limit, &m.Offset} }
+func (m *ListDevicesArgs) Pointers() []any {
+	return []any{&m.TenantId, &m.Type, &m.ActiveOnly, &m.Limit, &m.Offset}
+}
 
 func (m *ListDevicesArgs) IsNil() bool { return m == nil }
 
@@ -301,19 +378,33 @@ func (m *ListDevicesArgs) EncodeFields(w model.FieldWriter) {
 }
 
 func (m *ListDevicesArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
-	if v, ok := r.String("type"); ok { m.Type = v }
-	if v, ok := r.Bool("active_only"); ok { m.ActiveOnly = v }
-	if v, ok := r.Int("limit"); ok { m.Limit = v }
-	if v, ok := r.Int("offset"); ok { m.Offset = v }
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
+	if v, ok := r.String("type"); ok {
+		m.Type = v
+	}
+	if v, ok := r.Bool("active_only"); ok {
+		m.ActiveOnly = v
+	}
+	if v, ok := r.Int("limit"); ok {
+		m.Limit = v
+	}
+	if v, ok := r.Int("offset"); ok {
+		m.Offset = v
+	}
 }
 
 type ListDevicesArgsList []*ListDevicesArgs
 
-func (s *ListDevicesArgsList) Len() int             { return len(*s) }
+func (s *ListDevicesArgsList) Len() int               { return len(*s) }
 func (s *ListDevicesArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *ListDevicesArgsList) Append() model.Fielder  { v := &ListDevicesArgs{}; *s = append(*s, v); return v }
-func (s *ListDevicesArgsList) IsNil() bool          { return s == nil }
+func (s *ListDevicesArgsList) Append() model.Fielder {
+	v := &ListDevicesArgs{}
+	*s = append(*s, v)
+	return v
+}
+func (s *ListDevicesArgsList) IsNil() bool                      { return s == nil }
 func (s *ListDevicesArgsList) EncodeFields(_ model.FieldWriter) {}
 func (s *ListDevicesArgsList) DecodeFields(_ model.FieldReader) {}
 
@@ -323,7 +414,7 @@ func (m *ListDevicesArgs) Validate(action byte) error {
 
 type GetDeviceArgs struct {
 	TenantId string
-	Id string
+	Id       string
 }
 
 func (m *GetDeviceArgs) ModelName() string { return "get_device_args" }
@@ -340,16 +431,24 @@ func (m *GetDeviceArgs) EncodeFields(w model.FieldWriter) {
 }
 
 func (m *GetDeviceArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
-	if v, ok := r.String("id"); ok { m.Id = v }
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
+	if v, ok := r.String("id"); ok {
+		m.Id = v
+	}
 }
 
 type GetDeviceArgsList []*GetDeviceArgs
 
-func (s *GetDeviceArgsList) Len() int             { return len(*s) }
+func (s *GetDeviceArgsList) Len() int               { return len(*s) }
 func (s *GetDeviceArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *GetDeviceArgsList) Append() model.Fielder  { v := &GetDeviceArgs{}; *s = append(*s, v); return v }
-func (s *GetDeviceArgsList) IsNil() bool          { return s == nil }
+func (s *GetDeviceArgsList) Append() model.Fielder {
+	v := &GetDeviceArgs{}
+	*s = append(*s, v)
+	return v
+}
+func (s *GetDeviceArgsList) IsNil() bool                      { return s == nil }
 func (s *GetDeviceArgsList) EncodeFields(_ model.FieldWriter) {}
 func (s *GetDeviceArgsList) DecodeFields(_ model.FieldReader) {}
 
@@ -359,7 +458,7 @@ func (m *GetDeviceArgs) Validate(action byte) error {
 
 type DeactivateDeviceArgs struct {
 	TenantId string
-	Id string
+	Id       string
 }
 
 func (m *DeactivateDeviceArgs) ModelName() string { return "deactivate_device_args" }
@@ -376,16 +475,24 @@ func (m *DeactivateDeviceArgs) EncodeFields(w model.FieldWriter) {
 }
 
 func (m *DeactivateDeviceArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
-	if v, ok := r.String("id"); ok { m.Id = v }
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
+	if v, ok := r.String("id"); ok {
+		m.Id = v
+	}
 }
 
 type DeactivateDeviceArgsList []*DeactivateDeviceArgs
 
-func (s *DeactivateDeviceArgsList) Len() int             { return len(*s) }
+func (s *DeactivateDeviceArgsList) Len() int               { return len(*s) }
 func (s *DeactivateDeviceArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *DeactivateDeviceArgsList) Append() model.Fielder  { v := &DeactivateDeviceArgs{}; *s = append(*s, v); return v }
-func (s *DeactivateDeviceArgsList) IsNil() bool          { return s == nil }
+func (s *DeactivateDeviceArgsList) Append() model.Fielder {
+	v := &DeactivateDeviceArgs{}
+	*s = append(*s, v)
+	return v
+}
+func (s *DeactivateDeviceArgsList) IsNil() bool                      { return s == nil }
 func (s *DeactivateDeviceArgsList) EncodeFields(_ model.FieldWriter) {}
 func (s *DeactivateDeviceArgsList) DecodeFields(_ model.FieldReader) {}
 
@@ -395,7 +502,7 @@ func (m *DeactivateDeviceArgs) Validate(action byte) error {
 
 type DeleteDeviceArgs struct {
 	TenantId string
-	Id string
+	Id       string
 }
 
 func (m *DeleteDeviceArgs) ModelName() string { return "delete_device_args" }
@@ -412,16 +519,24 @@ func (m *DeleteDeviceArgs) EncodeFields(w model.FieldWriter) {
 }
 
 func (m *DeleteDeviceArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
-	if v, ok := r.String("id"); ok { m.Id = v }
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
+	if v, ok := r.String("id"); ok {
+		m.Id = v
+	}
 }
 
 type DeleteDeviceArgsList []*DeleteDeviceArgs
 
-func (s *DeleteDeviceArgsList) Len() int             { return len(*s) }
+func (s *DeleteDeviceArgsList) Len() int               { return len(*s) }
 func (s *DeleteDeviceArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *DeleteDeviceArgsList) Append() model.Fielder  { v := &DeleteDeviceArgs{}; *s = append(*s, v); return v }
-func (s *DeleteDeviceArgsList) IsNil() bool          { return s == nil }
+func (s *DeleteDeviceArgsList) Append() model.Fielder {
+	v := &DeleteDeviceArgs{}
+	*s = append(*s, v)
+	return v
+}
+func (s *DeleteDeviceArgsList) IsNil() bool                      { return s == nil }
 func (s *DeleteDeviceArgsList) EncodeFields(_ model.FieldWriter) {}
 func (s *DeleteDeviceArgsList) DecodeFields(_ model.FieldReader) {}
 
@@ -446,15 +561,21 @@ func (m *ListZonesArgs) EncodeFields(w model.FieldWriter) {
 }
 
 func (m *ListZonesArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
 }
 
 type ListZonesArgsList []*ListZonesArgs
 
-func (s *ListZonesArgsList) Len() int             { return len(*s) }
+func (s *ListZonesArgsList) Len() int               { return len(*s) }
 func (s *ListZonesArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *ListZonesArgsList) Append() model.Fielder  { v := &ListZonesArgs{}; *s = append(*s, v); return v }
-func (s *ListZonesArgsList) IsNil() bool          { return s == nil }
+func (s *ListZonesArgsList) Append() model.Fielder {
+	v := &ListZonesArgs{}
+	*s = append(*s, v)
+	return v
+}
+func (s *ListZonesArgsList) IsNil() bool                      { return s == nil }
 func (s *ListZonesArgsList) EncodeFields(_ model.FieldWriter) {}
 func (s *ListZonesArgsList) DecodeFields(_ model.FieldReader) {}
 
@@ -464,7 +585,7 @@ func (m *ListZonesArgs) Validate(action byte) error {
 
 type DeleteZoneArgs struct {
 	TenantId string
-	Id string
+	Id       string
 }
 
 func (m *DeleteZoneArgs) ModelName() string { return "delete_zone_args" }
@@ -481,16 +602,24 @@ func (m *DeleteZoneArgs) EncodeFields(w model.FieldWriter) {
 }
 
 func (m *DeleteZoneArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
-	if v, ok := r.String("id"); ok { m.Id = v }
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
+	if v, ok := r.String("id"); ok {
+		m.Id = v
+	}
 }
 
 type DeleteZoneArgsList []*DeleteZoneArgs
 
-func (s *DeleteZoneArgsList) Len() int             { return len(*s) }
+func (s *DeleteZoneArgsList) Len() int               { return len(*s) }
 func (s *DeleteZoneArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *DeleteZoneArgsList) Append() model.Fielder  { v := &DeleteZoneArgs{}; *s = append(*s, v); return v }
-func (s *DeleteZoneArgsList) IsNil() bool          { return s == nil }
+func (s *DeleteZoneArgsList) Append() model.Fielder {
+	v := &DeleteZoneArgs{}
+	*s = append(*s, v)
+	return v
+}
+func (s *DeleteZoneArgsList) IsNil() bool                      { return s == nil }
 func (s *DeleteZoneArgsList) EncodeFields(_ model.FieldWriter) {}
 func (s *DeleteZoneArgsList) DecodeFields(_ model.FieldReader) {}
 
@@ -505,7 +634,9 @@ type ListNetworkInterfacesArgs struct {
 
 func (m *ListNetworkInterfacesArgs) ModelName() string { return "list_network_interfaces_args" }
 
-func (m *ListNetworkInterfacesArgs) Schema() []model.Field { return ListNetworkInterfacesArgsModel.Fields }
+func (m *ListNetworkInterfacesArgs) Schema() []model.Field {
+	return ListNetworkInterfacesArgsModel.Fields
+}
 
 func (m *ListNetworkInterfacesArgs) Pointers() []any { return []any{&m.TenantId, &m.DeviceId} }
 
@@ -517,16 +648,24 @@ func (m *ListNetworkInterfacesArgs) EncodeFields(w model.FieldWriter) {
 }
 
 func (m *ListNetworkInterfacesArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
-	if v, ok := r.String("device_id"); ok { m.DeviceId = v }
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
+	if v, ok := r.String("device_id"); ok {
+		m.DeviceId = v
+	}
 }
 
 type ListNetworkInterfacesArgsList []*ListNetworkInterfacesArgs
 
-func (s *ListNetworkInterfacesArgsList) Len() int             { return len(*s) }
+func (s *ListNetworkInterfacesArgsList) Len() int               { return len(*s) }
 func (s *ListNetworkInterfacesArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *ListNetworkInterfacesArgsList) Append() model.Fielder  { v := &ListNetworkInterfacesArgs{}; *s = append(*s, v); return v }
-func (s *ListNetworkInterfacesArgsList) IsNil() bool          { return s == nil }
+func (s *ListNetworkInterfacesArgsList) Append() model.Fielder {
+	v := &ListNetworkInterfacesArgs{}
+	*s = append(*s, v)
+	return v
+}
+func (s *ListNetworkInterfacesArgsList) IsNil() bool                      { return s == nil }
 func (s *ListNetworkInterfacesArgsList) EncodeFields(_ model.FieldWriter) {}
 func (s *ListNetworkInterfacesArgsList) DecodeFields(_ model.FieldReader) {}
 
@@ -536,12 +675,14 @@ func (m *ListNetworkInterfacesArgs) Validate(action byte) error {
 
 type DeleteNetworkInterfaceArgs struct {
 	TenantId string
-	Id string
+	Id       string
 }
 
 func (m *DeleteNetworkInterfaceArgs) ModelName() string { return "delete_network_interface_args" }
 
-func (m *DeleteNetworkInterfaceArgs) Schema() []model.Field { return DeleteNetworkInterfaceArgsModel.Fields }
+func (m *DeleteNetworkInterfaceArgs) Schema() []model.Field {
+	return DeleteNetworkInterfaceArgsModel.Fields
+}
 
 func (m *DeleteNetworkInterfaceArgs) Pointers() []any { return []any{&m.TenantId, &m.Id} }
 
@@ -553,20 +694,27 @@ func (m *DeleteNetworkInterfaceArgs) EncodeFields(w model.FieldWriter) {
 }
 
 func (m *DeleteNetworkInterfaceArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("tenant_id"); ok { m.TenantId = v }
-	if v, ok := r.String("id"); ok { m.Id = v }
+	if v, ok := r.String("tenant_id"); ok {
+		m.TenantId = v
+	}
+	if v, ok := r.String("id"); ok {
+		m.Id = v
+	}
 }
 
 type DeleteNetworkInterfaceArgsList []*DeleteNetworkInterfaceArgs
 
-func (s *DeleteNetworkInterfaceArgsList) Len() int             { return len(*s) }
+func (s *DeleteNetworkInterfaceArgsList) Len() int               { return len(*s) }
 func (s *DeleteNetworkInterfaceArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *DeleteNetworkInterfaceArgsList) Append() model.Fielder  { v := &DeleteNetworkInterfaceArgs{}; *s = append(*s, v); return v }
-func (s *DeleteNetworkInterfaceArgsList) IsNil() bool          { return s == nil }
+func (s *DeleteNetworkInterfaceArgsList) Append() model.Fielder {
+	v := &DeleteNetworkInterfaceArgs{}
+	*s = append(*s, v)
+	return v
+}
+func (s *DeleteNetworkInterfaceArgsList) IsNil() bool                      { return s == nil }
 func (s *DeleteNetworkInterfaceArgsList) EncodeFields(_ model.FieldWriter) {}
 func (s *DeleteNetworkInterfaceArgsList) DecodeFields(_ model.FieldReader) {}
 
 func (m *DeleteNetworkInterfaceArgs) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
-

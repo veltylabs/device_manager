@@ -42,7 +42,7 @@ var DeviceModel = model.Definition{
 		{Name: "zone_id", Type: input.Select(), OmitEmpty: true},
 		{Name: "access", Type: kinds.DeviceAccess(), NotNull: true},
 		{Name: "is_active", Type: input.Checkbox(), NotNull: true},
-		{Name: "updated_at", Type: model.Int(), OmitEmpty: true},
+		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true},
 	},
 }
 
@@ -55,7 +55,7 @@ var ZoneModel = model.Definition{
 		{Name: "name", Type: input.Text(), NotNull: true, Permitted: namePermitted(64)},
 		{Name: "range_start", Type: input.IP(), NotNull: true},
 		{Name: "range_end", Type: input.IP(), NotNull: true},
-		{Name: "updated_at", Type: model.Int(), OmitEmpty: true},
+		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true},
 	},
 }
 
@@ -71,7 +71,7 @@ var NetworkInterfaceModel = model.Definition{
 		{Name: "label", Type: input.Text(), NotNull: true, Permitted: model.Permitted{Minimum: 1, Maximum: 32}},
 		{Name: "mac", Type: input.MAC(), OmitEmpty: true},
 		{Name: "ip", Type: input.IP(), OmitEmpty: true},
-		{Name: "updated_at", Type: model.Int(), OmitEmpty: true},
+		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true},
 	},
 }
 

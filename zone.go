@@ -49,7 +49,7 @@ func (m *Module) SaveZone(z Zone) (Zone, error) {
 		z.Id = m.ids.NewID()
 		action = model.ActionCreate
 	}
-	z.UpdatedAt = time.Now()
+	z.UpdatedAt = time.NowNano()
 	if err := z.Validate(action); err != nil {
 		return Zone{}, ValidationError{Err: err}
 	}

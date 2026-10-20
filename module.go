@@ -137,7 +137,7 @@ func (m *Module) CreateDevice(d Device) (Device, error) {
 	if d.Access == "" {
 		d.Access = network.AccessLocalName
 	}
-	d.UpdatedAt = time.Now()
+	d.UpdatedAt = time.NowNano()
 	if err := m.validateDevice(d, model.ActionCreate); err != nil {
 		return Device{}, err
 	}
@@ -158,7 +158,7 @@ func (m *Module) UpdateDevice(d Device) (Device, error) {
 	if _, err := m.GetDevice(d.TenantId, d.Id); err != nil {
 		return Device{}, err
 	}
-	d.UpdatedAt = time.Now()
+	d.UpdatedAt = time.NowNano()
 	if err := m.db.Update(&d, orm.Eq(Device_.Id, d.Id), orm.Eq(Device_.TenantId, d.TenantId)); err != nil {
 		return Device{}, err
 	}
@@ -174,7 +174,7 @@ func (m *Module) DeactivateDevice(tenantId, id string) error {
 		return err
 	}
 	d.IsActive = false
-	d.UpdatedAt = time.Now()
+	d.UpdatedAt = time.NowNano()
 	if err := m.db.Update(&d, orm.Eq(Device_.Id, d.Id), orm.Eq(Device_.TenantId, d.TenantId)); err != nil {
 		return err
 	}
