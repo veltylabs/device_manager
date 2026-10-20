@@ -113,7 +113,7 @@ func (m *Module) SaveNetworkInterface(ni NetworkInterface) (NetworkInterface, er
 		ni.Id = m.ids.NewID()
 		action = model.ActionCreate
 	}
-	ni.UpdatedAt = time.Now()
+	ni.UpdatedAt = time.NowNano()
 	if err := ni.Validate(action); err != nil {
 		return NetworkInterface{}, ValidationError{Err: err}
 	}
