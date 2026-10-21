@@ -2,8 +2,10 @@
 PLAN: "refactor!: build destinations — web/browser.go and ui/browser.go with //go:build browser"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 6061249605030948184
+PR: https://github.com/veltylabs/device_manager/pull/7
+REVIEWED_COMMIT: 7c05e1d87f09435e3b519bd217a80b66d8c3ead2
 ---
 
 > Read AGENTS.md at the repo root before any change.
