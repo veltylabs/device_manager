@@ -2,6 +2,8 @@
 PLAN: "feat(ui): one icon per screen from webtyp/icons, screens explain themselves, demo at web/browser/main.go"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 11065788138025855952
 ---
 
 > Read AGENTS.md at the repo root before any change.
