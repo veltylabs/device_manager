@@ -8,6 +8,9 @@ import (
 	"webtyp.com/time"
 )
 
+// GetZone obtiene una zona por su identificador para un tenant dado.
+//
+// Ejemplo: z, err := dm.GetZone(tenantID, zoneID)
 func (m *Module) GetZone(tenantId, id string) (Zone, error) {
 	var z Zone
 	qb := m.db.Query(&z).Where(Zone_.Id).Eq(id).Where(Zone_.TenantId).Eq(tenantId)
@@ -20,6 +23,9 @@ func (m *Module) GetZone(tenantId, id string) (Zone, error) {
 	return z, nil
 }
 
+// ListZones lista todas las zonas configuradas para un tenant.
+//
+// Ejemplo: zonas, err := dm.ListZones(tenantID)
 func (m *Module) ListZones(tenantId string) ([]Zone, error) {
 	var z Zone
 	rows, err := ReadAllZone(m.db.Query(&z).Where(Zone_.TenantId).Eq(tenantId))
@@ -33,9 +39,10 @@ func (m *Module) ListZones(tenantId string) ([]Zone, error) {
 	return zones, nil
 }
 
-// SaveZone creates the zone when Id is empty, else updates it. Its range must
-// be two IPv4 addresses with start <= end that overlap no other zone of the
-// tenant.
+// SaveZone crea la zona si Id está vacío, o la actualiza si ya existe. Su rango
+// debe ser dos direcciones IPv4 con start <= end y no solaparse con otra zona del tenant.
+//
+// Ejemplo: guardada, err := dm.SaveZone(z)
 func (m *Module) SaveZone(z Zone) (Zone, error) {
 	creating := z.Id == ""
 	z.RangeStart = input.CanonicalIP(z.RangeStart)
@@ -85,7 +92,9 @@ func (m *Module) SaveZone(z Zone) (Zone, error) {
 	return z, nil
 }
 
-// DeleteZone deletes a zone no device uses.
+// DeleteZone elimina una zona que no esté en uso por ningún equipo.
+//
+// Ejemplo: err := dm.DeleteZone(tenantID, zoneID)
 func (m *Module) DeleteZone(tenantId, id string) error {
 	z, err := m.GetZone(tenantId, id)
 	if err != nil {
@@ -108,7 +117,7 @@ func (m *Module) DeleteZone(tenantId, id string) error {
 	return nil
 }
 
-// zoneContaining returns the tenant's zone whose range holds ip, if any.
+// zoneContaining retorna la zona del tenant cuyo rango contiene la ip dada, si existe.
 func zoneContaining(zones []Zone, ip string) (Zone, bool) {
 	n, ok := ipv4ToUint32(ip)
 	if !ok {

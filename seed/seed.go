@@ -6,12 +6,14 @@ import (
 	"webtyp.com/network"
 )
 
+// Direcciones IP y MAC fijas de demostración (administradas globalmente, no aleatorias).
+//
+// Ejemplo: ip := seed.ReceptionIP
 const (
 	ReceptionIP = "192.168.1.10"
 	Box1IP      = "192.168.1.11"
 	PrinterIP   = "192.168.1.20"
 
-	// Fixed, globally administered (not randomized) demo MACs.
 	ReceptionMAC = "00:1A:2B:00:01:10"
 	Box1MAC      = "00:1A:2B:00:01:11"
 	PrinterMAC   = "00:1A:2B:00:01:20"
@@ -22,14 +24,19 @@ const (
 	ethernetLabel  = "ethernet"
 )
 
+// Data agrupa los registros sembrados para la demostración.
+//
+// Ejemplo: data := seed.Data{}
 type Data struct {
 	Zones      []devicemanager.Zone
 	Devices    []devicemanager.Device
 	Interfaces []devicemanager.NetworkInterface
 }
 
-// Load creates the demo zone, devices and interfaces for tenantID through the
-// module's own methods, so every row is validated.
+// Load crea la zona, equipos e interfaces de demostración para el tenantID a través de
+// los métodos del propio módulo, garantizando la validación completa de cada fila.
+//
+// Ejemplo: data, err := seed.Load(dm, tenantID)
 func Load(m *devicemanager.Module, tenantID string) (Data, error) {
 	zone, err := m.SaveZone(devicemanager.Zone{TenantId: tenantID, Name: zoneName,
 		RangeStart: zoneRangeStart, RangeEnd: zoneRangeEnd})

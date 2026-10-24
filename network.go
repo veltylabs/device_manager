@@ -5,7 +5,9 @@ import (
 	"webtyp.com/network"
 )
 
-// Reasons ImportHosts gives for a discovered entry it does not import.
+// Motivos que ImportHosts entrega para una entrada descubierta que no importa.
+//
+// Ejemplo: motivo := devicemanager.SkipNoMAC
 const (
 	SkipNoMAC             = "no MAC"
 	SkipNoIP              = "no IP"
@@ -13,10 +15,12 @@ const (
 	SkipAlreadyRegistered = "MAC already registered"
 )
 
-// importedNamePrefix names an imported device whose router entry had no comment.
+// importedNamePrefix asigna nombre a un equipo importado cuyo registro en el router no tenía comentario.
 const importedNamePrefix = "Imported "
 
-// NetworkHosts adapts the inventory of one tenant to webtyp.com/network.
+// NetworkHosts adapta el inventario de un tenant para webtyp.com/network.
+//
+// Ejemplo: nh := devicemanager.NetworkHosts{Devices: dm, TenantID: tenantID}
 type NetworkHosts struct {
 	Devices  *Module
 	TenantID string
@@ -27,7 +31,9 @@ var (
 	_ network.HostImporter = NetworkHosts{}
 )
 
-// Hosts returns one network.Host per interface WITH a MAC of an active device.
+// Hosts retorna un network.Host por cada interfaz CON dirección MAC de un equipo activo.
+//
+// Ejemplo: hosts, err := nh.Hosts()
 func (n NetworkHosts) Hosts() ([]network.Host, error) {
 	devices, err := n.Devices.ListDevices(n.TenantID, DeviceFilter{ActiveOnly: true})
 	if err != nil {
@@ -62,8 +68,10 @@ func (n NetworkHosts) Hosts() ([]network.Host, error) {
 	return hosts, nil
 }
 
-// ImportHosts creates one device + interface per discovered MAC; see
-// docs/ARCHITECTURE.md "Network boundary" for what is skipped and why.
+// ImportHosts crea un equipo e interfaz por cada MAC descubierta; ver
+// docs/ARCHITECTURE.md "Frontera de red" para saber qué se descarta y por qué.
+//
+// Ejemplo: res, err := nh.ImportHosts(discovered)
 func (n NetworkHosts) ImportHosts(found []network.Discovered) (network.ImportResult, error) {
 	var res network.ImportResult
 	zones, err := n.Devices.ListZones(n.TenantID)
@@ -118,7 +126,7 @@ func (n NetworkHosts) ImportHosts(found []network.Discovered) (network.ImportRes
 		_, err = n.Devices.SaveNetworkInterface(NetworkInterface{TenantId: n.TenantID, DeviceId: dev.Id,
 			Label: ImportedInterfaceLabel, Mac: mac, Ip: f.IP})
 		if err != nil {
-			// The device must not stay without its interface.
+			// El equipo no debe quedar sin su interfaz.
 			if delErr := n.Devices.DeleteDevice(n.TenantID, dev.Id); delErr != nil {
 				return res, delErr
 			}
@@ -148,8 +156,8 @@ func (n NetworkHosts) macRegistered(mac string) (bool, error) {
 	return len(rows) > 0, nil
 }
 
-// dashedMAC writes a canonical MAC with '-' separators: ':' is not allowed in
-// a device name.
+// dashedMAC escribe una dirección MAC canónica con guiones '-': el carácter ':' no se
+// permite en el nombre de un equipo.
 func dashedMAC(mac string) string {
 	b := []byte(mac)
 	for i := range b {

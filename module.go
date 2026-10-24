@@ -10,15 +10,19 @@ import (
 	"webtyp.com/time"
 )
 
-// Deps are the module's infrastructure ports — never a concrete implementation.
+// Deps define los puertos de infraestructura del módulo — nunca una implementación concreta.
+//
+// Ejemplo: deps := devicemanager.Deps{IDs: idGen, TenantID: "tenant-1"}
 type Deps struct {
-	IDs       model.IDGenerator // required — the module never builds its own
-	Publisher events.Publisher  // optional — nil disables publishing silently
-	TenantID  string            // required — this installation's tenant id, the
-	// fallback opListDevices uses when a caller sends
-	// no tenant_id (every crudview-backed list does)
+	IDs       model.IDGenerator // requerido — el módulo nunca genera sus propios IDs
+	Publisher events.Publisher  // opcional — nil desactiva la publicación silenciosamente
+	TenantID  string            // requerido — tenant id de esta instalación, valor por defecto
+	// cuando el invocador no envía tenant_id (típico en listas de crudview)
 }
 
+// Module es el servicio principal del inventario de equipos.
+//
+// Ejemplo: dm, err := devicemanager.New(db, deps)
 type Module struct {
 	db       *orm.DB
 	ids      model.IDGenerator
@@ -26,8 +30,10 @@ type Module struct {
 	tenantID string
 }
 
-// New connects the module to an already-connected *orm.DB; the schema is assumed
-// to already exist — see the migrate subpackage.
+// New conecta el módulo a una instancia ya conectada de *orm.DB; el esquema se asume
+// preexistente — ver el subpaquete migrate.
+//
+// Ejemplo: dm, err := devicemanager.New(db, deps)
 func New(db *orm.DB, deps Deps) (*Module, error) {
 	if deps.IDs == nil {
 		return nil, fmt.Err("device_manager: Deps.IDs is required")
@@ -38,8 +44,10 @@ func New(db *orm.DB, deps Deps) (*Module, error) {
 	return &Module{db: db, ids: deps.IDs, pub: deps.Publisher, tenantID: deps.TenantID}, nil
 }
 
-// DeviceFilter narrows ListDevices — a plain internal type, never ormc-generated (only its
-// transport twin ListDevicesArgs, in model_orm.go, is).
+// DeviceFilter acota los resultados de ListDevices — un tipo interno directo, nunca generado por ormc
+// (su gemelo de transporte es ListDevicesArgs en model_orm.go).
+//
+// Ejemplo: f := devicemanager.DeviceFilter{ActiveOnly: true}
 type DeviceFilter struct {
 	Type       string
 	ActiveOnly bool
@@ -47,13 +55,16 @@ type DeviceFilter struct {
 	Offset     int64
 }
 
+// GetDevice obtiene un equipo por su ID para un tenant específico.
+//
+// Ejemplo: d, err := dm.GetDevice(tenantID, deviceID)
 func (m *Module) GetDevice(tenantId, id string) (Device, error) {
 	var d Device
 	qb := m.db.Query(&d).Where(Device_.Id).Eq(id).Where(Device_.TenantId).Eq(tenantId)
 	_, err := ReadOneDevice(qb, &d)
 	if err != nil {
-		// Never hide a real DB failure as "not found" — only orm.ErrNotFound maps to the domain
-		// sentinel; anything else surfaces as the internal error it is.
+		// Nunca ocultar un fallo real de BD como "not found" — solo orm.ErrNotFound se mapea al
+		// centinela de dominio; cualquier otro error sube como el error interno que es.
 		if orm.IsNotFound(err) {
 			return Device{}, ErrNotFound
 		}
@@ -62,10 +73,11 @@ func (m *Module) GetDevice(tenantId, id string) (Device, error) {
 	return d, nil
 }
 
-// FindByIP looks ip up in its canonical spelling (input.CanonicalIP) among the
-// tenant's network interfaces and returns the device that owns it — the form
-// every interface is stored in, and the form webtyp.com/auth's ClientIP
-// reports — so the same machine matches however it connected.
+// FindByIP busca la IP en su formato canónico (input.CanonicalIP) entre las interfaces
+// de red del tenant y retorna el equipo dueño — el formato en que se almacenan las interfaces
+// y el formato en que reporta ClientIP de webtyp.com/auth.
+//
+// Ejemplo: d, err := dm.FindByIP(tenantID, "172.0.0.65")
 func (m *Module) FindByIP(tenantId, ip string) (Device, error) {
 	var ni NetworkInterface
 	qb := m.db.Query(&ni).Where(NetworkInterface_.Ip).Eq(input.CanonicalIP(ip)).Where(NetworkInterface_.TenantId).Eq(tenantId)
@@ -78,6 +90,9 @@ func (m *Module) FindByIP(tenantId, ip string) (Device, error) {
 	return m.GetDevice(tenantId, ni.DeviceId)
 }
 
+// ListDevices retorna los equipos de un tenant según el filtro especificado.
+//
+// Ejemplo: devices, err := dm.ListDevices(tenantID, filter)
 func (m *Module) ListDevices(tenantId string, filter DeviceFilter) ([]Device, error) {
 	var d Device
 	qb := m.db.Query(&d).Where(Device_.TenantId).Eq(tenantId)
@@ -104,13 +119,12 @@ func (m *Module) ListDevices(tenantId string, filter DeviceFilter) ([]Device, er
 	return devices, nil
 }
 
-// isValidDeviceType is the single place the 4 DeviceType* constants are checked against — never
-// duplicate this switch/comparison at another call site.
+// isValidDeviceType es el único lugar donde se verifican las 4 constantes DeviceType*.
 func isValidDeviceType(t string) bool {
 	return t == DeviceTypeComputer || t == DeviceTypePrinter || t == DeviceTypeServer || t == DeviceTypeOther
 }
 
-// validateDevice runs every check a device write needs, before the write.
+// validateDevice ejecuta todas las validaciones de escritura para un equipo.
 func (m *Module) validateDevice(d Device, action byte) error {
 	if err := d.Validate(action); err != nil {
 		return ValidationError{Err: err}
@@ -132,6 +146,9 @@ func (m *Module) validateDevice(d Device, action byte) error {
 	return nil
 }
 
+// CreateDevice crea un nuevo equipo en el inventario.
+//
+// Ejemplo: nuevo, err := dm.CreateDevice(d)
 func (m *Module) CreateDevice(d Device) (Device, error) {
 	d.Id = m.ids.NewID()
 	if d.Access == "" {
@@ -150,11 +167,14 @@ func (m *Module) CreateDevice(d Device) (Device, error) {
 	return d, nil
 }
 
+// UpdateDevice actualiza un equipo existente en el inventario.
+//
+// Ejemplo: actualizado, err := dm.UpdateDevice(d)
 func (m *Module) UpdateDevice(d Device) (Device, error) {
 	if err := m.validateDevice(d, model.ActionUpdate); err != nil {
 		return Device{}, err
 	}
-	// Verify the device exists and belongs to this tenant before writing.
+	// Verificar que el equipo exista y pertenezca a este tenant antes de actualizar.
 	if _, err := m.GetDevice(d.TenantId, d.Id); err != nil {
 		return Device{}, err
 	}
@@ -168,6 +188,9 @@ func (m *Module) UpdateDevice(d Device) (Device, error) {
 	return d, nil
 }
 
+// DeactivateDevice desactiva lógicamente un equipo (is_active = false).
+//
+// Ejemplo: err := dm.DeactivateDevice(tenantID, deviceID)
 func (m *Module) DeactivateDevice(tenantId, id string) error {
 	d, err := m.GetDevice(tenantId, id)
 	if err != nil {
@@ -184,12 +207,15 @@ func (m *Module) DeactivateDevice(tenantId, id string) error {
 	return nil
 }
 
+// DeleteDevice elimina definitivamente un equipo y todas sus interfaces asociadas.
+//
+// Ejemplo: err := dm.DeleteDevice(tenantID, deviceID)
 func (m *Module) DeleteDevice(tenantId, id string) error {
 	d, err := m.GetDevice(tenantId, id)
 	if err != nil {
 		return err
 	}
-	// Its interfaces first: network_interface.device_id references device.id.
+	// Primero sus interfaces: network_interface.device_id referencia a device.id.
 	ifaces, err := m.ListNetworkInterfaces(tenantId, id)
 	if err != nil {
 		return err

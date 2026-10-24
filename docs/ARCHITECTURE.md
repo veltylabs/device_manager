@@ -1,83 +1,82 @@
-# Device Manager Architecture
+# Arquitectura de Device Manager
 
-## Domain Scope
+## Alcance del dominio
 
-`device_manager` owns the **inventory of a site's equipment** (computers, printers, servers, other):
-what each device is, where it is (zone), which network cards it has (MAC + IP) and how much of the
-network it may use (access level). It is the *source of truth* that `veltylabs/network_manager`
-pushes to the router through `webtyp.com/network`; it never talks to a router itself.
+`device_manager` gestiona el **inventario de equipos del recinto** (computadores, impresoras, servidores, otros):
+qué es cada equipo, dónde está (zona), qué tarjetas de red posee (MAC + IP) y qué nivel de red puede
+usar (nivel de acceso). Es la *fuente de verdad* que `veltylabs/network_manager` aplica al router
+a través de `webtyp.com/network`; nunca interactúa directamente con el router.
 
-It also answers "which device has this IP?" (`FindByIP` / `IPLocator`), which `staff_manager` and the
-apps use for login from the local network.
+También responde a "¿qué equipo tiene esta IP?" (`FindByIP` / `IPLocator`), utilizado por `staff_manager`
+y las aplicaciones para el inicio de sesión desde la red local.
 
-## Entities
+## Entidades
 
-- **Zone**: a named area of the site served by one access point, with an IPv4 range
-  (`range_start`–`range_end`), e.g. "AP-06 piso 2", `172.0.0.60`–`172.0.0.69`. Ranges of one tenant
-  never overlap. A zone in use by a device cannot be deleted.
-- **Device**: `name`, `type` (`DeviceTypeComputer`/`Printer`/`Server`/`Other`), `location` (free
-  text), `zone_id` (optional, soft reference — empty means "no zone"), `access` (one of the
-  `webtyp.com/network` access names: `local`, `internet_filtered`, `internet`; default `local`),
+- **Zone**: área identificada del recinto atendida por un punto de acceso, con un rango IPv4
+  (`range_start`–`range_end`), por ejemplo "AP-06 piso 2", `172.0.0.60`–`172.0.0.69`. Los rangos de un
+  mismo tenant nunca se solapan. Una zona en uso por un equipo no puede eliminarse.
+- **Device**: `name`, `type` (`DeviceTypeComputer`/`Printer`/`Server`/`Other`), `location` (texto libre),
+  `zone_id` (referencia blanda opcional; vacía significa "sin zona"), `access` (uno de los nombres de
+  acceso de `webtyp.com/network`: `local`, `internet_filtered`, `internet`; por defecto `local`),
   `is_active`.
-- **NetworkInterface**: one network card of a device — `device_id` (FK), `label` ("wifi",
-  "ethernet"), `mac` (optional), `ip`.
-  - **IP**: unique per tenant. Left empty, it is **assigned automatically**: the lowest free address
-    of the device's zone. Given explicitly, it must lie inside the device's zone (devices without a
-    zone may hold any IP — e.g. the server's loopback aliases used for login).
-  - **MAC**: optional, unique per tenant when present, stored in canonical form
-    (`input.CanonicalMAC`). A **randomized** MAC (`input.IsLocallyAdministeredMAC`) is rejected with
-    instructions: phones and Windows can change it, and the device would lose its access without
-    warning (incident 2026-10-07).
-  - An interface **without MAC** still identifies its device for login by IP, but is **not** sent to
-    the router: only interfaces with a MAC become `network.Host`s.
+- **NetworkInterface**: una tarjeta de red de un equipo — `device_id` (clave foránea), `label` ("wifi",
+  "ethernet"), `mac` (opcional), `ip`.
+  - **IP**: única por tenant. Si se deja vacía, se **asigna automáticamente**: la dirección libre más
+    baja de la zona del equipo. Si se especifica explícitamente, debe pertenecer al rango de la zona del
+    equipo (los equipos sin zona pueden tener cualquier IP, como las interfaces loopback del servidor usadas
+    para inicio de sesión).
+  - **MAC**: opcional, única por tenant cuando está presente, almacenada en forma canónica
+    (`input.CanonicalMAC`). Las MAC **aleatorias** (`input.IsLocallyAdministeredMAC`) se rechazan con
+    instrucciones: teléfonos y Windows pueden cambiarlas y el equipo perdería acceso sin previo aviso.
+  - Una interfaz **sin MAC** identifica al equipo para inicio de sesión por IP, pero **no** se envía
+    al router: solo las interfaces con MAC se convierten en `network.Host`.
 
-Closed-option kinds (`type`, `access` radios) live in the `kinds` subpackage: ormc resolves a field
-kind by compiling its constructor, which it only imports from a package of its own. The root package
-re-exports the type names (`DeviceTypeComputer` = `kinds.TypeComputer`, …).
+Los tipos cerrados (`type`, radios de `access`) residen en el subpaquete `kinds`: ormc resuelve el tipo
+compilando su constructor, el cual solo importa desde un paquete propio. El paquete raíz reexporta los
+nombres (`DeviceTypeComputer` = `kinds.TypeComputer`, …).
 
-## Network boundary (`webtyp.com/network`)
+## Frontera de red (`webtyp.com/network`)
 
-- `NetworkHosts{Devices, TenantID}` implements `network.HostSource`: one `network.Host` per interface
-  with a MAC of an **active** device — `Name` = `"<device name> (<label>)"`, `Access` = the device's.
-- The same type implements `network.HostImporter`: creates a device (type `other`, access `internet`
-  if the router granted it Internet by hand, else `local`, zone = the zone whose range contains the
-  IP) plus one interface (`label` = `imported`) per discovered MAC. An entry without a router comment
-is named `Imported <MAC with '-' separators>` (`:` is not allowed in a name). Skipped, with a reason: no MAC,
-  no IP, randomized MAC, MAC already registered, or a name that fails validation.
+- `NetworkHosts{Devices, TenantID}` implementa `network.HostSource`: un `network.Host` por cada interfaz
+  con MAC de un equipo **activo** — `Name` = `"<nombre de equipo> (<etiqueta>)"`, `Access` = el del equipo.
+- El mismo tipo implementa `network.HostImporter`: crea un equipo (tipo `other`, acceso `internet` si
+  el router le otorgó Internet manualmente, de lo contrario `local`, zona = la zona cuyo rango contiene la
+  IP) más una interfaz (`label` = `imported`) por cada MAC descubierta. Una entrada sin comentario del router
+  se nombra `Imported <MAC con guiones>` (`:` no está permitido en un nombre). Se omiten con motivo:
+  sin MAC, sin IP, MAC aleatoria, MAC ya registrada o un nombre que no valida.
 
-## Patterns
+## Patrones
 
-- **Reusable-module harness**: coupled only to published contracts — see `AGENTS.md` (repo root).
-  `orm.DB` for storage; `migrate/` for schema; `router.OperationModule` for transport;
-  `model.IDGenerator` for identity; optional `events.Publisher`; `view.Presenter` for UI;
-  `webtyp.com/network` for the router boundary.
-- **Multi-tenancy**: every row carries `tenant_id`; every read/update/delete condition includes it.
-- **Typed events**: every published event carries the typed record.
+- **Estructura de módulo reutilizable**: acoplado solo a contratos publicados — ver `AGENTS.md` (raíz del repo).
+  `orm.DB` para persistencia; `migrate/` para esquema; `router.OperationModule` para transporte;
+  `model.IDGenerator` para identidad; opcional `events.Publisher`; `view.Presenter` para interfaz;
+  `webtyp.com/network` para la frontera con el router.
+- **Multiarrendamiento (Multi-tenancy)**: cada registro lleva `tenant_id`; cada condición de lectura/actualización/eliminación lo incluye.
+- **Eventos tipados**: cada evento publicado transporta el registro tipado correspondiente.
 
-## Ops (via `MountOperations`)
+## Operaciones (vía `MountOperations`)
 
-| Op | Action | Resource | Description |
+| Operación | Acción | Recurso | Descripción |
 |---|---|---|---|
-| `list_devices` | `r` | `device` | Devices of a tenant, optional type/active filter |
-| `get_device` | `r` | `device` | One device |
-| `create_device` / `update_device` / `upsert_device` | `c` / `u` / `c`+`u` | `device` | Write a device |
-| `deactivate_device` | `u` | `device` | Soft-delete (`is_active = false`) — its hosts leave the router plan |
-| `delete_device` | `d` | `device` | Hard-delete, with its interfaces |
-| `list_zones` | `r` | `zone` | Zones of a tenant |
-| `save_zone` | `c`+`u` | `zone` | Create or update a zone |
-| `delete_zone` | `d` | `zone` | Delete an unused zone |
-| `list_network_interfaces` | `r` | `network_interface` | Interfaces, optionally of one device |
-| `save_network_interface` | `c`+`u` | `network_interface` | Create or update; empty IP is auto-assigned |
-| `delete_network_interface` | `d` | `network_interface` | Delete an interface |
+| `list_devices` | `r` | `device` | Equipos de un tenant, con filtro opcional por tipo/activo |
+| `get_device` | `r` | `device` | Un equipo |
+| `create_device` / `update_device` / `upsert_device` | `c` / `u` / `c`+`u` | `device` | Escribir un equipo |
+| `deactivate_device` | `u` | `device` | Baja lógica (`is_active = false`) — sus hosts salen del plan del router |
+| `delete_device` | `d` | `device` | Eliminación definitiva, junto a sus interfaces |
+| `list_zones` | `r` | `zone` | Zonas de un tenant |
+| `save_zone` | `c`+`u` | `zone` | Crear o actualizar una zona |
+| `delete_zone` | `d` | `zone` | Eliminar una zona en desuso |
+| `list_network_interfaces` | `r` | `network_interface` | Interfaces, opcionalmente de un equipo |
+| `save_network_interface` | `c`+`u` | `network_interface` | Crear o actualizar; IP vacía se autoasigna |
+| `delete_network_interface` | `d` | `network_interface` | Eliminar una interfaz |
 
-## Existing databases
+## Bases de datos existentes
 
-Databases created before this model have a `device.ip` column (NOT NULL). `migrate.Migrate` creates
-`zone` and `network_interface`; copying each old `device.ip` into an interface and dropping the old
-column is a one-time step of the consuming application (`webtyp.com/ddl` never drops a populated
-column on its own).
+Las bases de datos creadas antes de este modelo poseen una columna `device.ip` (NOT NULL). `migrate.Migrate`
+crea `zone` y `network_interface`; copiar cada `device.ip` antiguo a una interfaz y descartar la columna antigua
+es un paso único de la aplicación consumidora (`webtyp.com/ddl` nunca descarta columnas con datos por sí sola).
 
-## Composition Root Example
+## Ejemplo de composición
 
 ```go
 dm, _ := devicemanager.New(db, devicemanager.Deps{IDs: ids, Publisher: pub, TenantID: tenant})

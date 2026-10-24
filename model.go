@@ -7,7 +7,9 @@ import (
 	"github.com/veltylabs/device_manager/kinds"
 )
 
-// Device types, re-exported from kinds (where the literals live — ormc needs kinds in their own package).
+// Tipos de equipos reexportados desde kinds (donde residen los literales; ormc requiere kinds en su propio paquete).
+//
+// Ejemplo: tipo := devicemanager.DeviceTypeComputer
 const (
 	DeviceTypeComputer = kinds.TypeComputer
 	DeviceTypePrinter  = kinds.TypePrinter
@@ -15,10 +17,10 @@ const (
 	DeviceTypeOther    = kinds.TypeOther
 )
 
-// nameChars is the charset of human names here (devices, zones): input.Text()'s
-// own set plus '-' and '_', so names copied from router comments
-// ("INTERNET PC-GASTRO-NEW") validate. An explicit field whitelist replaces the
-// Text kind's default floor (model.Field.Validate).
+// nameChars es el conjunto de caracteres permitidos para nombres humanos (equipos, zonas):
+// el conjunto de input.Text() más '-' y '_', de modo que nombres copiados de comentarios de router
+// ("INTERNET PC-GASTRO-NEW") sean válidos. Una lista blanca explícita reemplaza el umbral
+// por defecto del kind Text (model.Field.Validate).
 var nameChars = model.Permitted{Letters: true, Tilde: true, Numbers: true, Spaces: true,
 	Extra: []rune{'.', ',', '(', ')', '-', '_'}}
 
@@ -29,6 +31,9 @@ func namePermitted(max int) model.Permitted {
 	return p
 }
 
+// DeviceModel define el esquema y validaciones de un equipo en el inventario.
+//
+// Ejemplo: def := devicemanager.DeviceModel
 var DeviceModel = model.Definition{
 	Name: "device",
 	Fields: model.Fields{
@@ -37,8 +42,8 @@ var DeviceModel = model.Definition{
 		{Name: "name", Type: input.Text(), Label: "Name", NotNull: true, Permitted: namePermitted(255)},
 		{Name: "type", Type: kinds.DeviceType(), Label: "Type", NotNull: true},
 		{Name: "location", Type: input.Text(), Label: "Location", OmitEmpty: true, Permitted: model.Permitted{Maximum: 255}},
-		// Soft reference (no Ref): an empty zone_id must not become an FK violation.
-		// The UI fills its options (ui/browser.go).
+		// Referencia blanda (sin Ref): un zone_id vacío no debe ser una violación de FK.
+		// La UI llena sus opciones (ui/browser.go).
 		{Name: "zone_id", Type: input.Select(), Label: "Zone", OmitEmpty: true},
 		{Name: "access", Type: kinds.DeviceAccess(), Label: "Access", NotNull: true},
 		{Name: "is_active", Type: input.Checkbox(), Label: "Active", NotNull: true},
@@ -46,7 +51,9 @@ var DeviceModel = model.Definition{
 	},
 }
 
-// Zone: an area of the site served by one access point, with an IPv4 range.
+// ZoneModel define el esquema y validaciones de una zona del recinto (área servida por un AP con rango IPv4).
+//
+// Ejemplo: def := devicemanager.ZoneModel
 var ZoneModel = model.Definition{
 	Name: "zone",
 	Fields: model.Fields{
@@ -59,9 +66,10 @@ var ZoneModel = model.Definition{
 	},
 }
 
-// NetworkInterface: one network card of a device. mac is optional (an
-// interface without MAC still identifies its device for login by IP, but is
-// not sent to the router); ip is assigned from the device's zone when empty.
+// NetworkInterfaceModel define el esquema de una tarjeta de red de un equipo. mac es opcional;
+// ip se asigna automáticamente desde la zona del equipo si está vacía.
+//
+// Ejemplo: def := devicemanager.NetworkInterfaceModel
 var NetworkInterfaceModel = model.Definition{
 	Name: "network_interface",
 	Fields: model.Fields{
@@ -75,8 +83,11 @@ var NetworkInterfaceModel = model.Definition{
 	},
 }
 
-// Transport-only (Field.DB is nil on every field) — args of the ops in ops.go.
+// Modelos de solo transporte (Field.DB es nil en cada campo) — argumentos de las operaciones en ops.go.
 
+// ListDevicesArgsModel define los argumentos para listar equipos.
+//
+// Ejemplo: def := devicemanager.ListDevicesArgsModel
 var ListDevicesArgsModel = model.Definition{
 	Name: "list_devices_args",
 	Fields: model.Fields{
@@ -88,6 +99,9 @@ var ListDevicesArgsModel = model.Definition{
 	},
 }
 
+// GetDeviceArgsModel define los argumentos para obtener un equipo por ID.
+//
+// Ejemplo: def := devicemanager.GetDeviceArgsModel
 var GetDeviceArgsModel = model.Definition{
 	Name: "get_device_args",
 	Fields: model.Fields{
@@ -96,6 +110,9 @@ var GetDeviceArgsModel = model.Definition{
 	},
 }
 
+// DeactivateDeviceArgsModel define los argumentos para desactivar un equipo.
+//
+// Ejemplo: def := devicemanager.DeactivateDeviceArgsModel
 var DeactivateDeviceArgsModel = model.Definition{
 	Name: "deactivate_device_args",
 	Fields: model.Fields{
@@ -104,6 +121,9 @@ var DeactivateDeviceArgsModel = model.Definition{
 	},
 }
 
+// DeleteDeviceArgsModel define los argumentos para eliminar un equipo.
+//
+// Ejemplo: def := devicemanager.DeleteDeviceArgsModel
 var DeleteDeviceArgsModel = model.Definition{
 	Name: "delete_device_args",
 	Fields: model.Fields{
@@ -112,6 +132,9 @@ var DeleteDeviceArgsModel = model.Definition{
 	},
 }
 
+// ListZonesArgsModel define los argumentos para listar zonas.
+//
+// Ejemplo: def := devicemanager.ListZonesArgsModel
 var ListZonesArgsModel = model.Definition{
 	Name: "list_zones_args",
 	Fields: model.Fields{
@@ -119,6 +142,9 @@ var ListZonesArgsModel = model.Definition{
 	},
 }
 
+// DeleteZoneArgsModel define los argumentos para eliminar una zona.
+//
+// Ejemplo: def := devicemanager.DeleteZoneArgsModel
 var DeleteZoneArgsModel = model.Definition{
 	Name: "delete_zone_args",
 	Fields: model.Fields{
@@ -127,6 +153,9 @@ var DeleteZoneArgsModel = model.Definition{
 	},
 }
 
+// ListNetworkInterfacesArgsModel define los argumentos para listar interfaces de red.
+//
+// Ejemplo: def := devicemanager.ListNetworkInterfacesArgsModel
 var ListNetworkInterfacesArgsModel = model.Definition{
 	Name: "list_network_interfaces_args",
 	Fields: model.Fields{
@@ -135,6 +164,9 @@ var ListNetworkInterfacesArgsModel = model.Definition{
 	},
 }
 
+// DeleteNetworkInterfaceArgsModel define los argumentos para eliminar una interfaz de red.
+//
+// Ejemplo: def := devicemanager.DeleteNetworkInterfaceArgsModel
 var DeleteNetworkInterfaceArgsModel = model.Definition{
 	Name: "delete_network_interface_args",
 	Fields: model.Fields{
@@ -143,6 +175,9 @@ var DeleteNetworkInterfaceArgsModel = model.Definition{
 	},
 }
 
+// Constantes de nombres de recursos y etiquetas.
+//
+// Ejemplo: res := devicemanager.ResourceDevice
 const (
 	ResourceDevice           = "device"
 	ResourceZone             = "zone"
@@ -154,6 +189,9 @@ type domainError string
 
 func (e domainError) Error() string { return string(e) }
 
+// Errores de dominio del módulo.
+//
+// Ejemplo: if errors.Is(err, devicemanager.ErrNotFound) { ... }
 const (
 	ErrNotFound          domainError = "device not found"
 	ErrIPAlreadyExists   domainError = "device ip already exists"
@@ -169,11 +207,16 @@ const (
 	ErrInvalidZoneRange  domainError = "zone range must be two IPv4 addresses with start <= end"
 )
 
+// ValidationError envuelve un error de validación de campos.
+//
+// Ejemplo: return devicemanager.ValidationError{Err: err}
 type ValidationError struct{ Err error }
 
 func (v ValidationError) Error() string { return v.Err.Error() }
 
-// <module>.<entity>.<past-tense-verb> — tenant_id goes in the event payload, never the topic name.
+// Tópicos de eventos publicados por el módulo. El tenant_id viaja en el payload del evento, nunca en el tópico.
+//
+// Ejemplo: topico := devicemanager.TopicDeviceCreated
 const (
 	TopicDeviceCreated     = "device_manager.device.created"
 	TopicDeviceUpdated     = "device_manager.device.updated"

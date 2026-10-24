@@ -4,8 +4,8 @@ import "webtyp.com/fmt"
 
 const ipv4Octets = 4
 
-// ipv4ToUint32 parses a dotted IPv4 address into a number, so ranges compare
-// numerically. ok=false for anything that is not a dotted IPv4.
+// ipv4ToUint32 convierte una dirección IPv4 con puntos a un entero numérico, de modo
+// que los rangos puedan compararse numéricamente. ok=false para cualquier valor que no sea IPv4 válido.
 func ipv4ToUint32(ip string) (uint32, bool) {
 	parts := fmt.Convert(ip).Split(".")
 	if len(parts) != ipv4Octets {
@@ -25,13 +25,13 @@ func ipv4ToUint32(ip string) (uint32, bool) {
 	return n, true
 }
 
-// uint32ToIPv4 is the inverse of ipv4ToUint32.
+// uint32ToIPv4 es la función inversa de ipv4ToUint32.
 func uint32ToIPv4(n uint32) string {
 	return fmt.Sprintf("%d.%d.%d.%d", n>>24, (n>>16)&0xff, (n>>8)&0xff, n&0xff)
 }
 
-// zoneRange returns a zone's range as numbers; ok=false when it is not a
-// valid IPv4 range with start <= end.
+// zoneRange devuelve el rango de una zona en formato numérico; ok=false si no es un rango
+// IPv4 válido con start <= end.
 func zoneRange(z Zone) (start, end uint32, ok bool) {
 	s, ok1 := ipv4ToUint32(z.RangeStart)
 	e, ok2 := ipv4ToUint32(z.RangeEnd)

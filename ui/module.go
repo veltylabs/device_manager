@@ -1,13 +1,19 @@
 package ui
 
-// ID is this module's identity: RBAC resource prefix on the server, nav
-// route on the client.
+// ID es la identidad de este módulo: prefijo de recurso RBAC en el servidor y
+// ruta de navegación en el cliente.
+//
+// Ejemplo: moduleID := ui.ID
 const ID = "device_manager"
 
-// Label is the nav item's display text.
+// Label es el texto para mostrar en el menú de navegación.
+//
+// Ejemplo: label := ui.Label
 const Label = "Equipos"
 
-// Zones and network interfaces screens.
+// Identificadores y etiquetas de las pantallas de zonas e interfaces de red.
+//
+// Ejemplo: zonesID := ui.ZonesID
 const (
 	ZonesID         = "device_manager_zones"
 	ZonesLabel      = "Zonas"

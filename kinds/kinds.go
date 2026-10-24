@@ -1,6 +1,6 @@
-// Package kinds holds device_manager's closed-option field kinds. They live in
-// their own package because ormc resolves a field's kind by compiling and
-// running its constructor, which it can only import from a package of its own.
+// Package kinds contiene los tipos cerrados para campos con opciones de device_manager.
+// Viven en su propio paquete porque ormc resuelve el kind de un campo compilando
+// y ejecutando su constructor, el cual solo puede importar desde un paquete independiente.
 package kinds
 
 import (
@@ -9,8 +9,10 @@ import (
 	"webtyp.com/network"
 )
 
-// Device types — the ONLY place these literals exist (re-exported by the root
-// package as DeviceType*).
+// Tipos de equipos — el ÚNICO lugar donde existen estos literales (reexportados por
+// el paquete raíz como DeviceType*).
+//
+// Ejemplo: tipo := kinds.TypeComputer
 const (
 	TypeComputer = "computer"
 	TypePrinter  = "printer"
@@ -18,7 +20,9 @@ const (
 	TypeOther    = "other"
 )
 
-// DeviceType is the closed-options radio for Device.type.
+// DeviceType es el control de radio con opciones cerradas para Device.type.
+//
+// Ejemplo: in := kinds.DeviceType()
 func DeviceType() input.Input {
 	return input.Radio(
 		fmt.KeyValue{Key: TypeComputer, Value: "Computer"},
@@ -28,8 +32,10 @@ func DeviceType() input.Input {
 	)
 }
 
-// DeviceAccess is the closed-options radio for Device.access; the values are
-// webtyp.com/network's access names.
+// DeviceAccess es el control de radio con opciones cerradas para Device.access; los valores son
+// los nombres de acceso definidos en webtyp.com/network.
+//
+// Ejemplo: in := kinds.DeviceAccess()
 func DeviceAccess() input.Input {
 	return input.Radio(
 		fmt.KeyValue{Key: network.AccessLocalName, Value: "Local network only"},

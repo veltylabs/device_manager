@@ -1,4 +1,4 @@
-//go:build browser
+//go:build wasm
 
 package main
 
@@ -15,10 +15,10 @@ import (
 	"webtyp.com/unixid"
 )
 
-// demoTenantID is the only tenant of this in-browser demo.
+// demoTenantID es el único tenant de esta demostración en el navegador.
 const demoTenantID = "demo"
 
-// demoUser is the fixed identity the demo shell shows: the demo has no login.
+// demoUser es la identidad fija que muestra el chasis de demo: la demo no requiere inicio de sesión.
 type demoUser struct{}
 
 func (demoUser) UserName() string    { return "Demo" }

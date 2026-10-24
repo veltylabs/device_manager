@@ -5,6 +5,9 @@ import (
 	"webtyp.com/router"
 )
 
+// Nombres de operaciones expuestas por el módulo.
+//
+// Ejemplo: op := devicemanager.OpListDevices
 const (
 	OpListDevices      = "list_devices"
 	OpGetDevice        = "get_device"
@@ -22,14 +25,21 @@ const (
 	OpDeleteNetworkInterface = "delete_network_interface"
 )
 
-// ModelName is this module's identity: mcp.HarvestOps qualifies every op
-// below as "device_manager.<name>" on the wire, and view.go's NewView passes
-// this same constant as view.Ops.Module so the client composes the identical
-// qualified name.
+// ModelName es la identidad de este módulo: mcp.HarvestOps califica cada operación
+// como "device_manager.<nombre>" en el transporte, y NewView en view.go usa esta
+// misma constante como view.Ops.Module para que el cliente genere nombres idénticos.
+//
+// Ejemplo: name := devicemanager.ModelName
 const ModelName = "device_manager"
 
+// ModelName devuelve el identificador de módulo en el router.
+//
+// Ejemplo: name := dm.ModelName()
 func (m *Module) ModelName() string { return ModelName }
 
+// MountOperations registra las operaciones del módulo en el registro de operaciones del router.
+//
+// Ejemplo: dm.MountOperations(reg)
 func (m *Module) MountOperations(reg router.OperationRegistry) {
 	reg.Operation(OpListDevices, m.opListDevices).Requires(ResourceDevice, model.Read).Accepts(&ListDevicesArgs{})
 	reg.Operation(OpGetDevice, m.opGetDevice).Requires(ResourceDevice, model.Read).Accepts(&GetDeviceArgs{})

@@ -8,6 +8,9 @@ import (
 	"webtyp.com/time"
 )
 
+// GetNetworkInterface obtiene una interfaz de red por su identificador para un tenant dado.
+//
+// Ejemplo: iface, err := dm.GetNetworkInterface(tenantID, ifaceID)
 func (m *Module) GetNetworkInterface(tenantId, id string) (NetworkInterface, error) {
 	var ni NetworkInterface
 	qb := m.db.Query(&ni).Where(NetworkInterface_.Id).Eq(id).Where(NetworkInterface_.TenantId).Eq(tenantId)
@@ -20,8 +23,10 @@ func (m *Module) GetNetworkInterface(tenantId, id string) (NetworkInterface, err
 	return ni, nil
 }
 
-// ListNetworkInterfaces lists the tenant's interfaces; a non-empty deviceId
-// narrows them to that device.
+// ListNetworkInterfaces lista las interfaces de red del tenant; si se especifica deviceId,
+// acota los resultados a las interfaces de dicho equipo.
+//
+// Ejemplo: ifaces, err := dm.ListNetworkInterfaces(tenantID, deviceID)
 func (m *Module) ListNetworkInterfaces(tenantId, deviceId string) ([]NetworkInterface, error) {
 	var ni NetworkInterface
 	qb := m.db.Query(&ni).Where(NetworkInterface_.TenantId).Eq(tenantId)
@@ -39,8 +44,10 @@ func (m *Module) ListNetworkInterfaces(tenantId, deviceId string) ([]NetworkInte
 	return out, nil
 }
 
-// SaveNetworkInterface creates the interface when Id is empty, else updates
-// it. See docs/ARCHITECTURE.md for the MAC and IP rules it enforces.
+// SaveNetworkInterface crea la interfaz si Id está vacío, o la actualiza si ya existe.
+// Aplica las reglas de unicidad y validación de MAC e IP detalladas en docs/ARCHITECTURE.md.
+//
+// Ejemplo: guardada, err := dm.SaveNetworkInterface(ni)
 func (m *Module) SaveNetworkInterface(ni NetworkInterface) (NetworkInterface, error) {
 	creating := ni.Id == ""
 	dev, err := m.GetDevice(ni.TenantId, ni.DeviceId)
@@ -131,6 +138,9 @@ func (m *Module) SaveNetworkInterface(ni NetworkInterface) (NetworkInterface, er
 	return ni, nil
 }
 
+// DeleteNetworkInterface elimina una interfaz de red por su identificador.
+//
+// Ejemplo: err := dm.DeleteNetworkInterface(tenantID, ifaceID)
 func (m *Module) DeleteNetworkInterface(tenantId, id string) error {
 	ni, err := m.GetNetworkInterface(tenantId, id)
 	if err != nil {
@@ -145,8 +155,7 @@ func (m *Module) DeleteNetworkInterface(tenantId, id string) error {
 	return nil
 }
 
-// freeIP returns the lowest address of the zone not held by any interface
-// other than self.
+// freeIP retorna la dirección más baja de la zona que no esté asignada a ninguna otra interfaz distinta de self.
 func freeIP(z Zone, all []NetworkInterface, self string) (string, bool) {
 	s, e, ok := zoneRange(z)
 	if !ok {

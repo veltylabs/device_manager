@@ -6,26 +6,20 @@ import (
 	devicemanager "github.com/veltylabs/device_manager"
 )
 
-// Migrate reconciles the database schema device_manager owns: Zone, Device,
+// Migrate reconcilia el esquema de base de datos de device_manager: Zone, Device,
 // NetworkInterface.
 //
-// It is deliberately NOT called by New, and deliberately lives in its own
-// package rather than a new file in the root package: nothing on a
-// consuming app's WASM build path (its view.go, which imports the root
-// devicemanager package for devicemanager.NewView) ever imports
-// "github.com/veltylabs/device_manager/migrate" — so webtyp.com/ddl never
-// enters that build graph, regardless of build tags on the consumer's side.
+// No es invocado por New y vive deliberadamente en su propio paquete: nada en la ruta
+// de compilación WASM de una aplicación consumidora importa este paquete, evitando que
+// webtyp.com/ddl ingrese en dicho grafo de dependencias.
 //
-// conn is a ddl.Execer, not an *orm.DB, so a deploy-time transport that can
-// only execute DDL satisfies it. An *orm.DB's RawConn() also satisfies it,
-// for local/test callers:
+// conn es un ddl.Execer, no un *orm.DB, por lo que un ejecutor DDL de despliegue lo satisface.
+// RawConn() de *orm.DB también lo satisface para pruebas y entornos locales.
 //
-//	conn, _ := postgres.Open(dsn)
-//	compiler, _ := conn.(ddl.Compiler)
-//	err := migrate.Migrate(conn, compiler)
+// Ejemplo: err := migrate.Migrate(conn, compiler)
 func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
 	d := ddl.New(conn, ddlCompiler)
-	// FK order: network_interface.device_id references device.id.
+	// Orden de dependencias FK: network_interface.device_id referencia a device.id.
 	if err := d.CreateTable(&devicemanager.Zone{}); err != nil {
 		return err
 	}
