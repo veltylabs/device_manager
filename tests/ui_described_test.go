@@ -1,40 +1,49 @@
-//go:build browser
-
 package tests
 
 import (
 	"testing"
 
+	devicemanager "github.com/veltylabs/device_manager"
 	"github.com/veltylabs/device_manager/ui"
-	"webtyp.com/layout/platformd"
+	"webtyp.com/icons/laptop"
+	"webtyp.com/icons/location"
+	"webtyp.com/icons/network"
 )
 
-// Las tres pantallas se explican solas y cada una tiene su propio dibujo.
+// Las tres pantallas se explican solas, validan según view.Screen y cada una tiene su propio dibujo y permiso.
 func TestUI_ScreensAreDescribedWithTheirOwnIcon(t *testing.T) {
 	fake := &uiFakeCaller{}
-	devices, err := ui.Browser(fake, &mockIDGen{}, "tenant-test")
-	if err != nil {
-		t.Fatal(err)
+	screens := ui.Screens(fake)
+	if len(screens) != 3 {
+		t.Fatalf("expected 3 screens, got %d", len(screens))
 	}
-	zones, err := ui.ZonesBrowser(fake, &mockIDGen{}, "tenant-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	ifaces, err := ui.InterfacesBrowser(fake, &mockIDGen{}, "tenant-test")
-	if err != nil {
-		t.Fatal(err)
-	}
+
 	want := []struct {
-		screen platformd.UIModule
-		icon   string
-	}{{devices, "laptop"}, {zones, "location"}, {ifaces, "network"}}
-	for _, w := range want {
-		d, ok := w.screen.(platformd.Described)
-		if !ok || d.Description() == "" {
-			t.Errorf("%s must implement platformd.Described with a non-empty text", w.screen.ModelName())
+		id         string
+		icon       string
+		permission string
+	}{
+		{ui.ID, laptop.Ref.ID(), string(devicemanager.ResourceDevice)},
+		{ui.ZonesID, location.Ref.ID(), string(devicemanager.ResourceZone)},
+		{ui.InterfacesID, network.Ref.ID(), string(devicemanager.ResourceNetworkInterface)},
+	}
+
+	for i, w := range want {
+		s := screens[i]
+		if err := s.Validate(); err != nil {
+			t.Fatalf("screen %s validation failed: %v", s.ID, err)
 		}
-		if got := w.screen.Icon().ID(); got != w.icon {
-			t.Errorf("%s icon = %q, want %q", w.screen.ModelName(), got, w.icon)
+		if s.ID != w.id {
+			t.Errorf("screen %d ID = %q, want %q", i, s.ID, w.id)
+		}
+		if s.Icon != w.icon {
+			t.Errorf("screen %d Icon = %q, want %q", i, s.Icon, w.icon)
+		}
+		if string(s.Permission) != w.permission {
+			t.Errorf("screen %d Permission = %q, want %q", i, s.Permission, w.permission)
+		}
+		if s.Presenter.Description() == "" {
+			t.Errorf("screen %d presenter must have a non-empty text", i)
 		}
 	}
 }

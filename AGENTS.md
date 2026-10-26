@@ -1,267 +1,98 @@
-# AGENTS.md — veltylabs/modules (canonical template)
+# Workflow configuration
 
-<!-- webtyp:base — copied from devskills skill agents-md; do not edit here -->
-## Ecosystem rules — read before any change
+-   **Workflow status**: **Active**
+-   **Architecture**: Domain module (`veltylabs/*`) — implements `router.OperationModule`.
+-   **Composition root**: Never runs alone; instantiated and wired by `veltylabs/app`.
+-   **Current focus**: Data modeling, rules, and tests.
 
-`docs/PLAN.md` is the spec: no design judgment; anything unclear is a question in the PR, not a guess.
+---
 
-- Public API: typed (no `any`/`interface{}`), explicit, minimal; never export a symbol only a test uses.
-- One intent, one path: the old path is deleted in the same change. No silent fallback, `TODO`, commented code or stub.
-- Fail at compile time, else a loud diagnostic — never silently. Zero values deny.
-- A defect in a dependency is reported, never wrapped or patched here.
-- No string literals in logic: named constants. The same logic never lives in two repos: import the package the plan names; if you find an existing one the plan does not name that already does what you are about to write, say so in the PR instead of writing it.
-- `cmd/*/main.go`: parse flags, inject, print/exit only. stdout = data, stderr = logs, exit codes are the contract.
-- WASM code: `webtyp/fmt`, `webtyp/time`, `webtyp/json` instead of stdlib; no `map`; `dom.Element` embedded by value.
-- `css.go`, `svg.go`, `js.go`, `html.go` carry `//go:build !wasm`; no `ssr.go`, no `front.go`.
-- Build tags: `wasm`/`!wasm` only when the API does not exist on that platform; `browser`/`!browser` when the file belongs to another binary One main per folder, no destination tag: `web/browser/main.go` → `web/public/browser.wasm`, `web/server/main.go` → `web/server/server`, `web/edge/main.go` → `web/edge/edge.wasm`.
-- Code and keys in English; UI text is `lang.Text`, translations live in `lang.json`. Comments and docs: English in `webtyp/*`; in `veltylabs/*` **every README, `docs/*` file, diagram and code comment is in Spanish**, written for a reader with little technical background, and each exported symbol's comment shows a short usage example.
-- A translation key is reused, never duplicated as a near-identical phrase (`"not a valid integer"` + `"not a valid decimal number"` repeats `"not a valid"` three ways instead of composing it once) — every library ships to WASM/TinyGo, so each unreused phrase is dictionary rows AND binary bytes, in every consumer, forever. A token that doesn't need translating (a kind/type name like `int`) is passed as data (a variable), never as a string literal — a literal becomes a dictionary key whether or not it needed one.
-- Tests cover behaviour and domain rules, never the look (CSS, colours, markup order, class strings). In `tests/` (external package), real stack with fakes only at the edge; run `gotest`.
-- Docs (`README.md`, `docs/*`) updated with the API; permanent docs never link `docs/PLAN.md`.
-- Before the PR: `git diff --stat main` lists every file of the plan's stages, and nothing the plan did not order is deleted.
-<!-- /webtyp:base -->
+# Architecture bounds and code constraints
 
-## This repo
+This is a **domain module** repository. The root package (the module itself) adheres to strict constraints to remain technology-agnostic and universally composable:
 
-Working notes for AI agents operating on any `veltylabs/<module>` repo. Every module gets its own
-copy of this file at its root, adjusted only in the "Domain-specific notes" section at the bottom —
-the rules above that line are **verbatim across every module**, do not fork them. If a rule here
-turns out to be wrong for a module, the fix belongs here (and replicates outward), not as a local
-exception in one module's copy.
+## Language and ecosystem
 
-Master plan (cross-repo status, whitelist rationale, dispatch order):
-[`app-releases/docs/REUSABLE_MODULES_MASTER_PLAN.md`](https://github.com/webtyp/app/blob/main/docs/REUSABLE_MODULES_MASTER_PLAN.md).
-Reference implementation (the pattern every module replicates): `github.com/veltylabs/item_catalog`.
+-   **Go only**: This repository contains pure Go code. No shell scripts, Makefiles, JS/TS, Python, Dockerfiles, or CI/CD configuration files are permitted.
+-   **Language**: `es` (Spanish) for docs, comments, UI text and struct field descriptions. `en` (English) for exported Go identifiers, JSON keys, SQL tables/columns, log messages, and test names.
 
-## Mission of a `veltylabs/modules/*` repo
+## The whitelist — what the root package may import
 
-A **domain module**: business logic for one bounded concern (catalog, scheduling, payouts, …),
-published as an independent Go library, importable by any app in the Velty ecosystem. It is a piece
-of lego — it must assemble under a transport, a database, an ID generator, an encoding and a
-renderer it has never seen, chosen by whichever app composes it.
+The root package (`*.go` in the repository root) may ONLY import from the standard library (subject to the blacklist below) and:
+- `webtyp.com/fmt`, `webtyp.com/input`, `webtyp.com/events`, `webtyp.com/network`, `webtyp.com/time` (domain primitives and utilities).
+- `webtyp.com/model` (entities, validation, definitions, ops).
+- `webtyp.com/orm` (persistence via generated typed query builders).
+- `webtyp.com/router` (transport/RPC, ops registration, typed RPC client).
+- `webtyp.com/view` (presentation logic decoupled from DOM/React/Vue).
+- `webtyp.com/lang` (translations).
 
-## The whitelist — what a module may import
+## The blacklist — what the root package MUST NEVER import
 
-A module's **non-test** Go files may import, from `webtyp.com/*`:
+The root package must remain entirely independent of rendering engines, UI frameworks, protocol handlers, direct DOM manipulation, and explicit storage engines.
+- **Never import `webtyp.com/layout/*` or `webtyp.com/components/*`**. UI logic (React/Vue/DOM equivalents) belongs strictly in the `ui/` subpackage.
+- **Never import `webtyp.com/storage/*`**. The module accepts an already-connected `*orm.DB`.
+- **Never import `webtyp.com/dom`, `webtyp.com/css`, `webtyp.com/widget`, `webtyp.com/html`, `webtyp.com/svg`**.
+- **Never import standard library formatting/conversion/reflection**: `fmt`, `strconv`, `reflect` are strictly banned. Use `webtyp.com/fmt` instead.
+- **Never import standard library time**: `time` is strictly banned. Use `webtyp.com/time` instead.
+- **Never import other domain modules**: A root module must never import another domain module directly. Cross-module wiring is done via interfaces at the composition root.
+- **No `replace` directives**: A `go.mod` file must never contain `replace` directives (especially local paths). Use `go get module@version`.
 
-| Package | Role | Why it's a port, not a concrete dependency |
-|---|---|---|
-| `model` | `Model`/`Fielder`/`Encodable`/`Decodable`/`IDGenerator`/`Definition` | Schema + codec *interfaces*; concrete encoders (`json`, `jsvalue`) live outside |
-| `router` | `OperationModule`/`OperationRegistry`/`Context`/`Caller` | Transport-agnostic; a module implements `OperationModule`, never a concrete server |
-| `view` | `Presenter`, `view.New(...)` | UI contract; the renderer (`layout/crudview` or any other) is injected by the app |
-| `events` | `Publisher`/`Subscriber`/`Event` | Pub/sub contract; the broker (in-proc, `sse`, a queue) is injected |
-| `orm` | `*orm.DB`, query builder (`Create`/`Update`/`Delete`/`Query`) | Ergonomic layer over `storage.Conn` — the equivalent of `database/sql`, backend-agnostic by construction |
-| `storage` | `Conn`/`Condition`/`Query` (mostly transitive, via `orm`'s re-exports in `reexport.go`) | The actual storage **port** — `orm` never redefines it |
-| `ddl` | `CreateTable`/`Sync` (runtime schema) | Sibling of `orm` over `storage.Conn` — still backend-agnostic |
-| `form/input` | `input.Text()`, `input.Number()`, … (`Kind` with a UI widget) | Only when a `model.Definition` field needs a widget for a form; still just a `Kind`, no renderer |
-| `fmt` | string/number/error handling, `Err(...)` | The ecosystem's stdlib replacement — see the stdlib section below |
-| `time` | date/time helpers | The ecosystem's `time` replacement (isomorphic, wasm-safe) |
-| `network` | `Host`/`Access`/`Settings`/`Gateway`/`HostSource`/`HostImporter` | Network-access port: the concrete gateway (`veltylabs/mikrotik`, or `network/mem` in tests) is injected by the app |
+## Go idioms and rules
 
-**"Port" vs "concrete implementation" is the whole test.** `orm`/`storage`/`ddl` are agnostic — they
-work unchanged against `sqlt`, `postgres`, `mem`, or a future `indexdb` backend, selected by whoever
-calls `orm.New(conn)`. A module importing them does **not** know or care which backend is behind the
-`storage.Conn` it receives. That is different from importing `webtyp/sqlite` (a driver) or
-`webtyp/mcp` (a transport) directly — those name one implementation, foreclosing all the others.
-
-## The blacklist — what a module may never import, in any file, tests included
-
-- **Any concrete storage backend**: `webtyp/sqlite`, `webtyp/sqlt`, `webtyp/postgres`,
-  `webtyp/indexdb`, or any `database/sql` driver. A module's own tests exercise
-  `storage/mem` (`webtyp.com/storage/mem`) via `orm.New(mem.New())` — the in-memory
-  reference backend built for exactly this. **Not even in `_test.go` files** — a concrete driver
-  pulled in "just for tests" is still a dependency the module ships, and it is exactly the coupling
-  this whitelist exists to prevent. Backend integration tests belong to the composition-root app
-  repo, never to the module.
-- **A concrete transport**: `webtyp/mcp`, `webtyp/server`/`httpd`, or anything importing
-  `net/http`. A module speaks `router.OperationModule`; the app decides which transport harvests it.
-- **A concrete network gateway**: `veltylabs/mikrotik` (or any router SDK). Accept `network.Gateway` via `Deps`; tests use `webtyp.com/network/mem`.
-- **A concrete ID generator**: `webtyp/unixid`. Accept `model.IDGenerator` via `Deps` instead —
-  never construct one inside the module.
-- **A concrete encoder**: `webtyp/json`, `webtyp/jsvalue`. A module's models implement
-  `model.Encodable`/`Decodable` (generated by `ormc`); which concrete `FieldWriter`/`FieldReader`
-  walks them (JSON text, JS values, a future binary codec) is the app's choice, made at the transport
-  boundary, never inside the module.
-- **A concrete renderer**: `webtyp/layout` (or any other UI kit). A module builds its
-  `view.Presenter` with `view.New(caller, ...)` — `view`+`model`+`router` only. The app picks the
-  renderer that draws that `Presenter`.
-- **A self-declared port that duplicates an ecosystem contract**: no local `EventPublisher`,
-  `UIAdapter`, `IDGenerator`, or `CatalogService`-as-transport-shim interface that intersects
-  `events.Publisher`/`view.Presenter`/`model.IDGenerator`/`router.OperationModule`. If a boundary needs a
-  contract this list doesn't name, that is a defect **upstream** (in `model`/`router`/`view`/`events`/
-  `orm`), fixed there and consumed here — never patched locally. A module may still declare its own
-  narrow cross-module reader interfaces (`CatalogReader`, `StaffReader`, …) for **domain** data it
-  needs from a sibling module — that pattern stays (see Cross-module wiring below).
-- **No `internal/` package that forks or vendors an ecosystem repo.** If an upstream package is
-  missing a function, the fix is a `docs/PLAN.md` against *that* repo, published upstream — never a
-  local copy with a `replace` directive in `go.mod`. A `replace` pointing at a local path is always a
-  defect to close, not a workaround to keep.
-
-## The stdlib boundary
-
-`webtyp.com/fmt` **is** the stdlib replacement for this ecosystem: nothing in it, and
-nothing built on it, imports `fmt`, `strings`, `strconv`, or `errors` — `webtyp.com/fmt` already
-provides string manipulation, number conversion, and error construction (`fmt.Err(...)`),
-reflection-free and TinyGo-sized. A module targets `wasm`/TinyGo first, so it follows the same rule:
-
-- **Banned, use the webtyp replacement instead:** `errors`, `strings`, `strconv`, stdlib `fmt` →
-  `webtyp.com/fmt`. `encoding/json` → `model.Encodable`/`Decodable` (the module never
-  chooses the concrete encoder). `database/sql` → `orm`/`storage`. `net/http` → `router`. `time` →
-  `webtyp.com/time`.
-- **Fine to use directly:** anything that isn't a contract this ecosystem already replaces —
-  `testing`, `sort`, `context` (stdlib, when it's genuinely cancellation/deadlines, not the
-  transport-level `webtyp/context`), etc. When in doubt: if `webtyp.com/fmt` (or another package in
-  the whitelist above) already covers it, use that; if it doesn't, plain stdlib is fine.
-- **No Go `map[K]V` anywhere**, test code included — and **no exceptions for "private state"**: a
-  map inside a closure or unexported field ships TinyGo's map runtime in the wasm binary exactly the
-  same. Use `fmt.KeyValue{Key, Value string}` for a string→string pair, or a small slice-of-structs
-  scanned linearly for anything else (the `byID []*X` linear-scan cache in `item_catalog/view.go` is
-  the reference) — module collections (a tenant's items, a schema's fields) are always small enough
-  that a linear scan costs nothing measurable.
-- **No `reflect`.** Struct introspection is a build-time (`ormc`) concern; the module consumes
-  generated `Schema()`/`Pointers()`/`EncodeFields`/`DecodeFields`, it never inspects itself at
-  runtime.
-
-## Model definitions — constraints, enums, widget policy
-
-- **Constraints are declared in the `Definition`, and validation runs before every write.** Required
-  fields carry `NotNull: true`; formats carry a `Permitted` floor (e.g. ISO-4217 currency:
-  `Permitted{Letters: true, Minimum: 3, Maximum: 3}`; an `"HH:MM"` column: digits + `':'`, exactly
-  5). Every create/update path calls the generated `Validate(action)` (or
-  `model.ValidateFields`) **before** `db.Create`/`db.Update` — fail-closed: data that was never
-  validated never reaches the DB. Manual `if x == ""` checks may exist as defense in depth but never
-  replace the declared constraint.
-- **Enum-valued columns: the string literals live ONLY in exported constants** (`ItemTypeService`,
-  `PayoutStatusPending`, …) — never inline at a call site, never documented solely in a
-  `// "a" | "b"` comment. A value that must be *remembered* is a hole in the harness. A
-  user-editable enum field additionally gets a closed-options widget: a package-local custom widget
-  wrapping `input.Radio()`/`input.Select()` + `SetOptions(fmt.KeyValue{Key: TheConstant, ...})` —
-  the `form/input/gender.go` pattern. Adding an enum value = one new constant + one option line,
-  greppable. (Known upstream gap: `input.Base.Validate` does not yet enforce membership in
-  `Options`; that is a `webtyp.com/form` defect being fixed upstream — never patch it locally.)
-- **Widgets are assigned by ROLE, never copied from an older generated file**: `input.X()` ONLY on
-  fields a user edits in a form. Base kinds (`model.X()`) on ids, `tenant_id`, timestamps, and every
-  **output-only** result/response model — output is never rendered as an editable form, and a widget
-  there makes `form.New` produce editable inputs for data the user must not touch. Dropping a widget
-  from a genuinely form-bound field silently renders an empty form — so the rule cuts both ways.
-- **Intra-module foreign keys are declared** (`Ref: &OtherModel` + `DB: &model.FieldDB{RefColumn:
-  "id"}` — drives DDL constraint generation; the Go type stays the plain scalar). Cross-module
-  references stay soft (a plain string id/SKU) — the root domain package never imports another module (see "ui/, seed/ and web/" for the DAG rule).
-
-## Op handlers — decode → validate → respond
-
-- Handler shape, in order: `ctx.Decode(&args)` (error ⇒ 400) → `args.Validate(action)` (error ⇒
-  400) → service method → encode/status.
-- **Status convention** (never collapse everything into 500 — a misuse that produces a generic 500
-  is the "runtime mystery" the harness forbids): `400` decode/validation/invalid precondition ·
-  `403` RBAC denial (the router writes it) · `404` not-found (`ErrNotFound`-class sentinels) ·
-  `409` conflict (`ErrAlreadyExists`, slot taken, revision mismatch) · `500` genuine internal
-  errors only. Sentinels are always distinguished from real errors before mapping — and a real DB
-  error is **never** swallowed into a not-found (`err == orm.ErrNotFound` maps to the domain
-  sentinel; anything else propagates as the internal error it is).
-- **`.Requires(resource, action)` declares every action the op can actually perform.**
-  `model.Action` is a bitmask: an upsert that creates on the not-found branch and updates otherwise
-  requires `model.Create|model.Update` — declaring only one lets a partially-granted principal do
-  the other (closed-by-default violation).
-- **A no-args op declares `.Accepts(nil)`** ("nil means 'no args'", per `router.Route`) — never an
-  invented empty args Definition/struct.
-
-## Multi-tenancy — scoping is enforced in the condition, not the pre-read
-
-- Every tenant-scoped table carries `tenant_id` (`NotNull: true`), and **every UPDATE/DELETE
-  condition includes the tenant column** — `orm.Eq(X_.Id, id)` alone is a cross-tenant write
-  waiting to happen; the read-then-write pattern (fetch with tenant check, then mutate by id only)
-  is a TOCTOU window, not a defense. Never mutate what you could not read: if the tenant-scoped
-  fetch fails, return the error — no "stub delete" fallbacks.
-- A module that is deliberately **not** tenant-scoped states so in its "Domain-specific notes" and
-  `docs/ARCHITECTURE.md`, as an explicit signed-off decision — never by silent omission.
-
-## Identity, persistence, transport, view, events — the shape every module takes
-
-- **Identity**: `Deps.IDs model.IDGenerator`, required. The module calls `m.ids.NewID()`; it never
-  constructs a generator.
-- **Persistence**: `New(db *orm.DB, deps Deps)` receives an already-connected
-  `*orm.DB` and assumes its schema already exists — it never creates or
-  alters tables, and never imports `webtyp.com/ddl`. Schema reconciliation
-  lives in its own **subpackage**, `<module>/migrate` (`package migrate`),
-  exporting `Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error`.
-  Deliberately not called by `New`, and deliberately not in the module's
-  root package: schema work is deploy-time work, run once from a migration
-  binary (`cmd/migrate` in the composition-root app) — and keeping it in a
-  separate package means nothing on a WASM build's import path (`view.go`,
-  `init.go`, the root package itself) ever pulls `webtyp.com/ddl` into that
-  binary, regardless of build tags.
+- **Interface equality**: Direct interface equality comparisons (e.g., `err == ErrNotFound`), `switch` on interface values, and `errors.Is`/`errors.As` are strictly prohibited to maintain TinyGo/WASM compatibility. Always use type assertions on unexported custom types (e.g., `if e, ok := err.(domainError); ok && e == ErrNotFound`).
+- **Sentinel Errors**: For external errors, use provided query functions (e.g., `orm.IsNotFound(err)`). For internal sentinel errors, define them as constants of an unexported string alias:
   ```go
-  // migrate/migrate.go
-  package migrate
-
-  import (
-      "webtyp.com/ddl"
-
-      thismodule "github.com/veltylabs/<this-module>"
-  )
-
-  func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
-      d := ddl.New(conn, ddlCompiler)
-      if err := d.CreateTable(&thismodule.CatalogItem{}); err != nil {
-          return err
-      }
-      return nil
-  }
+  type domainError string
+  func (e domainError) Error() string { return string(e) }
+  const ErrNotFound domainError = "not found"
   ```
-  A module's own tests build `*orm.DB` over `storage/mem`
-  (`orm.New(mem.New())`), which creates tables lazily on first `Exec` — they
-  never call `Migrate`, and `New` never needs to type-assert for
-  `ddl.Compiler` at all anymore.
-- **Transport**: the module implements `router.OperationModule` — `ModelName() string` +
-  `MountOperations(reg router.OperationRegistry)`, registering each operation with `.Requires(resource, action)`
-  and `.Accepts(&ArgsType{})`. It never implements `router.APIModule`/`Router`, and never sees
-  `mcp.Tool`/`mcp.ToolProvider`.
-- **View**: `NewView(caller router.Caller) view.Presenter`, built with `view.New(...)` — importing
-  only `view`+`model`+`router`. The app supplies both the `router.Caller` and the renderer that draws
-  the resulting `Presenter`.
-- **Events**: `Deps.Publisher events.Publisher`, optional — `nil` disables publishing silently. The
-  module publishes `events.Event{Topic: ..., Payload: &typedRecord}` after every successful mutation,
-  never a bare `map` or `any` payload.
-- **Cross-module wiring**: when module A needs data from module B, A declares the narrow interface it
-  needs (`CatalogReader`, `StaffReader`, …) in its own package; B's `*Module` satisfies it structurally
-  (no import of A). The composition root wires concrete instances together. Root domain packages never import each other; only ui/, seed/ and web/ may, upstream only.
+- **Maps are prohibited**: The use of Go maps (`map[K]V`) is strictly prohibited. Use slices or structs.
+
+## Data definitions (`model.Definition`) and generated code
+
+- Types implementing `model.Definition` (the domain entities) are annotated with field tags (`label`, `desc`, `form`, `type`, `limit`, etc.).
+- When definitions change, the schema and queries must be regenerated using `ormc` (`$(go env GOPATH)/bin/ormc`).
+- `ormc` strictly generates `model_orm.go`. It does not accept parameters.
+- **CRITICAL**: `ormc` alters `go.mod`. You must backup `go.mod` before running `ormc`, run it, and restore `go.mod`, followed by `go mod tidy`.
+  ```bash
+  cp go.mod /tmp/go.mod.bak && ormc && cp /tmp/go.mod.bak go.mod && go mod tidy
+  ```
+- Types implementing `model.Definition` must be defined in the root package, never in subpackages. `ormc` does not scan subpackages. Custom closed-set types (e.g., enums/radios) must live in a subpackage (e.g., `kinds/`) to prevent `ormc` from trying to generate database tables for them.
+
+## Operations (`router.OperationModule`)
+
+- The module exposes its capabilities via `MountOperations(reg router.OperationRegistry)`.
+- It registers typed operations using `reg.Register(OpName, handler)`.
+- **`handler.Requires(resource, action)`**: Every operation MUST declare the exact permissions it requires. If an operation performs both a read and a write, it requires both (e.g., `model.ActionRead|model.ActionUpdate`).
+- **`handler.Accepts(args)`**: Every operation MUST declare the payload it accepts. If it accepts no arguments, it MUST explicitly declare `.Accepts(nil)`. Do not invent empty `struct{}` argument types.
+- Never swallow actual database errors as `not found`. Only `orm.ErrNotFound` should be mapped to the domain's "not found" sentinel; anything else propagates as the internal error it is.
+
+## Multi-tenancy
+
+- Every tenant-scoped table MUST carry `tenant_id` (`NotNull: true`).
+- **Every UPDATE/DELETE condition MUST include the tenant column.** `orm.Eq(X_.Id, id)` alone is a cross-tenant write vulnerability. The pattern of fetching with a tenant check, and then mutating by ID only, introduces a TOCTOU (Time-of-Check Time-of-Use) window.
+- If a tenant-scoped fetch fails, return the error. Do not implement "stub delete" fallbacks.
+- Modules that are deliberately not tenant-scoped must state this explicitly in their "Domain-specific notes" and `docs/ARCHITECTURE.md`.
+
+## Testing
+
+- **Runner**: All tests MUST be run using `gotest` (`$(go env GOPATH)/bin/gotest`), never `go test` directly. (If missing, install via `go install github.com/webtyp/devflow/cmd/gotest@latest`).
+- **WASM Compatibility**: Modules must compile to WASM. Always verify with: `GOOS=js GOARCH=wasm go vet ./...`
+- **Scope**: Tests must live in `tests/` (package `tests`) and only exercise the exported API. `tests/` is a plain directory inside the root module, NEVER a nested Go module (no `tests/go.mod`).
+- **Mocking**: Tests build their `*orm.DB` over `storage/mem` (`orm.New(mem.New())`). Drive `MountOperations` against `router/mock`. Test `view.Presenter` against `view/conformance`'s `FakeCaller` or a hand-rolled caller. Never use a concrete DB, transport, or renderer.
+- **Tenant Isolation Tests**: Every tenant-scoped module MUST include targeted tests verifying that Tenant A cannot read/update/delete Tenant B's rows through any service method or operation.
+- **Meaningful Assertions**: Tests must assert on results and behaviors. Calling methods and discarding returns (`_ = m.Validate(0)`) inflates coverage without proving correctness and is invalid.
+- **Widget Regression**: Modules with form widgets in their Definitions must include a test verifying that `form.New(id, &GeneratedArgs{})` yields exactly the expected inputs.
 
 ## ui/, seed/ and web/ — the module's own view and demo
 
 The whitelist and blacklist above apply to the **root domain package**. Three sub-packages are exempt, and only them:
 
-- `ui/` (package `ui`, `ui/browser.go` tagged `browser`; `css.go`/`svg.go` tagged `!wasm`) may import `webtyp.com/layout/*`, `webtyp.com/components/*`, `dom`, `html`, `css`, `svg`, `widget`. It is the module's screen: `const ID`, `const Label` and `Browser(caller router.Caller, ids model.IDGenerator, tenantID string) (platformd.UIModule, error)`.
+- `ui/` (package `ui`, `ui/browser.go` tagged `browser`; `css.go`/`svg.go` tagged `!wasm`) may import `webtyp.com/icons/*`. It is the module's screen definition: `const ID`, `const Label` and `Screens(caller router.Caller) []view.Screen`.
 - `seed/` (package `seed`, no build tag) holds demo data: `Load(...) (Data, error)`, which writes through the module's own methods so every row is validated, and returns the rows it created so downstream demos can reference them.
 - `web/` (package `main`, `web/browser.go` tagged `browser`) is the runnable demo and may additionally import the concrete `webtyp.com/storage/mem`, `webtyp.com/router/loopback`, `webtyp.com/events/mock`, `webtyp.com/unixid` and `webtyp.com/auth/trusted_ip` (for `ValidateRUT`).
 
 **Dependencies between modules form a DAG.** The root domain package still imports no sibling module. `ui/`, `seed/` and `web/` may import the domain, `ui/` and `seed/` packages of **upstream** modules only. Current graph: `device_manager`, `item_catalog`, `patient_directory`, `business_calendar`, `payment_manager` (leaves) ← `staff_manager` ← `appointment_booking` ← `clinical_encounter` (`appointment_booking` also depends on `item_catalog`, `patient_directory`, `business_calendar`, `payment_manager`; `clinical_encounter` also on `patient_directory` and `staff_manager`). A screen that mixes modules lives in the most-downstream module it touches.
-
-## Testing
-
-- Runner: `gotest`, never `go test` directly (once installed via
-  `go install github.com/webtyp/devflow/cmd/gotest@latest`).
-- A module's own tests build its `*orm.DB` over `storage/mem` (`orm.New(mem.New())`), drive
-  `MountOperations` against `router/mock` (satisfies `router.OperationRegistry`), and exercise the `view.Presenter`
-  against `view/conformance`'s `FakeCaller` or a hand-rolled fake `router.Caller` — never a concrete
-  DB, transport, or renderer.
-- Tests live in `tests/` (package `tests`, external — exercises only the exported API), per the
-  ecosystem convention. `tests/` is a plain directory **inside the root module** — **never a nested
-  Go module**: no `tests/go.mod`, no `replace` back to the parent (a local-path `replace` is always
-  a defect, see the blacklist). Test-only deps resolve via one `go mod tidy` at the module root.
-- Conformance suites live in their own same-named file (`tests/conformance_test.go`) — test files
-  stay small and modular, never one giant file.
-- Every tenant-scoped module includes **tenant-isolation tests** (tenant A cannot read/update/
-  delete tenant B's rows through any service method or op) — in the module's own suite, not
-  deferred to a backlog.
-- Tests assert on results — a test that calls methods and discards every return
-  (`_ = m.Validate(0)`) inflates coverage while proving nothing; coverage earned that way does not
-  count. Prefer roundtrips (encode→decode field-by-field equality) and behavior assertions.
-- A module whose Definitions carry form widgets includes the widget-regression test: `form.New(id,
-  &GeneratedArgs{})` yields exactly the expected inputs — catches a regeneration that silently
-  loses widgets.
-- Compile-time contract checks belong next to the implementation: `var _ router.OperationModule =
-  (*Module)(nil)`.
 
 ## Publishing / dispatch
 

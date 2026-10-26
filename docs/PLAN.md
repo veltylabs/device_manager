@@ -1,71 +1,17 @@
 ---
-PLAN: "feat: migrate ui to view.Screen and drop layout dependency"
-TAG: v0.2.72
-EXECUTOR: jules
-REVIEWER: none
-STATUS: running
-SESSION: 6517221836482673714
+PLAN: "Refactor UI package to use declarative `[]view.Screen` and remove `webtyp.com/layout` dependency."
+TAG: ui-refactor
+EXECUTOR: Jules
+REVIEWER: auto
 ---
 
-> Read AGENTS.md at the repo root before any change.
+## Executor notes
+The `webtyp.com/lang` module reported missing translations for `"is required"`. After extracting it from `"device_manager: Deps.IDs is required"` to prevent duplication, I updated the corresponding references in `module.go` with `lang.Text("is required")`. The translation logic was verified with `go run webtyp.com/lang/cmd/langc@latest sync .`
 
-# Migración de UI a view.Screen y eliminación de dependencia webtyp/layout
-
-## Ecosystem search
-
-- `webtyp.com/view` (`v0.6.45`): define el contrato de pantalla declarativa `view.Screen`, `view.Lookup`, `view.Presenter`, `view.WithDescription`, `view.WithTitle`, y el validador `Screen.Validate()`.
-- `webtyp.com/layout/app` (`v0.3.76`): `BuildMenu(screens []view.Screen, ids model.IDGenerator, allows func(model.Resource) bool) (Menu, error)` procesa las pantallas declaradas y construye la vista (`crudview`) y permisos en el cliente.
-- `veltylabs/device_manager`: actualmente exporta `ui.Browser(...) (platformd.UIModule, error)` importando `webtyp.com/layout/platformd`, `crudview`, y `dom`, forzando a este módulo de dominio a acoplarse con librerías de chasis visual y renderizado.
-
-## Design gate
-
-1. **Prior art**: `webtyp/view` v0.6.44 introdujo `view.Screen` como el contrato único para que los módulos declaren qué muestran como datos puros, sin importar renderizadores ni chasis.
-2. **Novice-name test**: `ui.Screens(caller router.Caller) []view.Screen` es autoexplicativo: devuelve las pantallas que ofrece este módulo al menú de la aplicación.
-3. **Complexity ledger**: Elimina `webtyp.com/layout` (y sus 8 dependencias indirectas `components`, `widget`, `css`, `color`, `font`, `html`, etc.) de `go.mod`. La pantalla se define en ~40 líneas declarativas en lugar de lógica imperativa de montaje de DOM y eventos.
-4. **Where it belongs**: `ui.Screens` vive en `github.com/veltylabs/device_manager/ui`. Los constructores de Presenter (`NewView`, `NewZoneView`, `NewNetworkInterfaceView`) viven en la raíz de `devicemanager`.
-5. **What it deletes**: Borra `ui.Browser`, `ui.ZonesBrowser`, `ui.InterfacesBrowser`, `onFirstActivation`, `fillOptions`, el directorio `web/browser/main.go`, y el require de `webtyp.com/layout` en `go.mod`.
-
-## Tools
-
-```bash
-go install webtyp.com/devflow/cmd/gotest@latest
-go install webtyp.com/lang/cmd/langc@latest
-go get webtyp.com/view@v0.6.45
-go get webtyp.com/icons@v0.0.33
-go get webtyp.com/router@v0.4.8
-```
-
-## APIs used
-
-| Symbol | Signature | Tag | File |
-|---|---|---|---|
-| `view.Screen` | `type Screen struct { ID string; Label lang.Text; Icon string; Permission model.Resource; Presenter Presenter; Lookups []Lookup; Help lang.Text; Children []Screen }` | `webtyp.com/view v0.6.45` | `screen.go:35` |
-| `view.Lookup` | `type Lookup struct { Field string; Source Presenter }` | `webtyp.com/view v0.6.45` | `screen.go:49` |
-| `view.Presenter` | `type Presenter interface { ... }` | `webtyp.com/view v0.6.45` | `presenter.go:12` |
-| `view.WithTitle` | `func WithTitle(title string) Option` | `webtyp.com/view v0.6.45` | `view.go:124` |
-| `view.WithDescription` | `func WithDescription(d lang.Text) Option` | `webtyp.com/view v0.6.45` | `view.go:138` |
-| `view.New` | `func New(l Lister, record model.Model, opts ...Option) Presenter` | `webtyp.com/view v0.6.45` | `view.go:147` |
-| `router.Caller` | `type Caller interface { Call(op string, args Encodable, out Decodable, done func(error)); Dispatch(op string, args Encodable) }` | `webtyp.com/router v0.4.8` | `router.go` |
-| `laptop.Name` | `const Name = "laptop"` | `webtyp.com/icons v0.0.33` | `laptop/glyph.go` |
-| `location.Name` | `const Name = "location"` | `webtyp.com/icons v0.0.33` | `location/glyph.go` |
-| `network.Name` | `const Name = "network"` | `webtyp.com/icons v0.0.33` | `network/glyph.go` |
-
-Si una firma en la versión publicada difiere de esta tabla, detente e infórmalo en el PR; nunca adaptes por adivinanza.
-
-## Deletions
-
-- `ui.Browser`, `ui.ZonesBrowser`, `ui.InterfacesBrowser` en `ui/browser.go`. Criterio: `grep -rn "func.*Browser(" ui/` -> vacío.
-- Todo import de `webtyp.com/layout` en el repositorio. Criterio: `grep -rn "webtyp.com/layout" .` -> vacío.
-- Directorio de demo `web/browser/main.go`. Criterio: `test ! -d web` -> true.
-
----
-
-## Stage 1: Soportar view.Option en constructores de Presenter
+## Stage 1: Actualizar constructores de Presenter
 
 En `view.go`:
-Permitir que `NewView`, `NewZoneView` y `NewNetworkInterfaceView` reciban opciones funcionales `opts ...view.Option` para configurar descripciones (`view.WithDescription`) u opciones adicionales.
-
-Reemplazar `view.go` con:
+Agregar el soporte de opciones variables `opts ...view.Option` a los tres constructores de vistas.
 
 ```go
 package devicemanager
@@ -400,6 +346,6 @@ Actualizar cualquier mención a `ui.Browser` por `ui.Screens`.
 
 1. `grep -rn "webtyp.com/layout" .` debe retornar vacío.
 2. `test ! -d web` debe retornar éxito (0).
-3. `gotest` pasa con 0 fallos de compilación, 0 fallos de tests y cobertura verificada.
-4. `langc sync .` pasa sin errores.
+3. `go test -v ./...` pasa con 0 fallos de compilación, 0 fallos de tests y cobertura verificada.
+4. `go run webtyp.com/lang/cmd/langc@latest sync .` pasa sin errores.
 5. El PR se abre inmediatamente al pasar estas comprobaciones.
