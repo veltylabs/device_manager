@@ -1,8 +1,12 @@
 ---
-PLAN: "Refactor UI package to use declarative `[]view.Screen` and remove `webtyp.com/layout` dependency."
-TAG: ui-refactor
-EXECUTOR: Jules
-REVIEWER: auto
+PLAN: "feat: migrate ui to view.Screen and drop layout dependency"
+TAG: v0.2.72
+EXECUTOR: jules
+REVIEWER: none
+STATUS: review
+SESSION: 6517221836482673714
+PR: https://github.com/veltylabs/device_manager/pull/8
+REVIEWED_COMMIT: 940f24ef482bba99693972eb09a35ee29bc272ba
 ---
 
 ## Executor notes
