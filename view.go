@@ -43,12 +43,13 @@ const titleDevices = "Equipos"
 // NewView construye el Presenter de equipos — el motor independiente de la tecnología
 // que cualquier renderizador (crudview u otro) envuelve.
 //
-// Ejemplo: p := devicemanager.NewView(caller)
-func NewView(caller router.Caller) view.Presenter {
+// Ejemplo: p := devicemanager.NewView(caller, view.WithDescription("Ayuda..."))
+func NewView(caller router.Caller, opts ...view.Option) view.Presenter {
 	b := view.NewCallerLister(caller,
 		view.Ops{Module: ModelName, List: OpListDevices, Save: OpUpsertDevice, Delete: OpDeleteDevice},
 		func() model.ModelSlice { return &DeviceList{} })
-	return view.New(b, &Device{}, view.WithTitle(titleDevices))
+	allOpts := append([]view.Option{view.WithTitle(titleDevices)}, opts...)
+	return view.New(b, &Device{}, allOpts...)
 }
 
 const (
@@ -58,20 +59,22 @@ const (
 
 // NewZoneView construye el Presenter de zonas.
 //
-// Ejemplo: p := devicemanager.NewZoneView(caller)
-func NewZoneView(caller router.Caller) view.Presenter {
+// Ejemplo: p := devicemanager.NewZoneView(caller, view.WithDescription("Ayuda..."))
+func NewZoneView(caller router.Caller, opts ...view.Option) view.Presenter {
 	b := view.NewCallerLister(caller,
 		view.Ops{Module: ModelName, List: OpListZones, Save: OpSaveZone, Delete: OpDeleteZone},
 		func() model.ModelSlice { return &ZoneList{} })
-	return view.New(b, &Zone{}, view.WithTitle(titleZones))
+	allOpts := append([]view.Option{view.WithTitle(titleZones)}, opts...)
+	return view.New(b, &Zone{}, allOpts...)
 }
 
 // NewNetworkInterfaceView construye el Presenter de interfaces de red.
 //
-// Ejemplo: p := devicemanager.NewNetworkInterfaceView(caller)
-func NewNetworkInterfaceView(caller router.Caller) view.Presenter {
+// Ejemplo: p := devicemanager.NewNetworkInterfaceView(caller, view.WithDescription("Ayuda..."))
+func NewNetworkInterfaceView(caller router.Caller, opts ...view.Option) view.Presenter {
 	b := view.NewCallerLister(caller,
 		view.Ops{Module: ModelName, List: OpListNetworkInterfaces, Save: OpSaveNetworkInterface, Delete: OpDeleteNetworkInterface},
 		func() model.ModelSlice { return &NetworkInterfaceList{} })
-	return view.New(b, &NetworkInterface{}, view.WithTitle(titleNetworkInterfaces))
+	allOpts := append([]view.Option{view.WithTitle(titleNetworkInterfaces)}, opts...)
+	return view.New(b, &NetworkInterface{}, allOpts...)
 }

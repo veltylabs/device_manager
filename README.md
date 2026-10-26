@@ -43,15 +43,11 @@ hosts := devicemanager.NetworkHosts{Devices: dm, TenantID: tenant} // network.Ho
 
 ## Vistas y demo
 
-El módulo exporta tres pantallas bajo `ui/`: `ui.Browser` (Equipos), `ui.ZonesBrowser` (Zonas) y
-`ui.InterfacesBrowser` (Interfaces de red), todas con la firma `(caller, ids, tenantID)`. Cada pantalla
-cuenta con su propio dibujo tomado de `webtyp/icons` y una descripción (`platformd.Describe`). Los selectores
-de zonas y equipos se completan automáticamente al activar cada pantalla.
+El módulo exporta tres pantallas declarativas bajo `ui/` accesibles mediante `ui.Screens(caller)` (Equipos, Zonas, e Interfaces de red).
+Cada pantalla cuenta con su propio dibujo tomado de `webtyp/icons` y una descripción (`view.WithDescription`). Los selectores
+de zonas y equipos se configuran declarativamente mediante `Lookups`.
 
 Los datos de demostración pueden cargarse usando `seed.Load(m, tenantID)`.
-
-La demo vive en `web/browser/main.go`. Ejecuta `webtyp` en la raíz del repositorio para abrir la demo en
-el navegador, en memoria y sin necesidad de iniciar sesión.
 
 ## Archivos clave
 

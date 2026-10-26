@@ -4,6 +4,7 @@ import (
 	"webtyp.com/events"
 	"webtyp.com/fmt"
 	"webtyp.com/input"
+	"webtyp.com/lang"
 	"webtyp.com/model"
 	"webtyp.com/network"
 	"webtyp.com/orm"
@@ -36,10 +37,10 @@ type Module struct {
 // Ejemplo: dm, err := devicemanager.New(db, deps)
 func New(db *orm.DB, deps Deps) (*Module, error) {
 	if deps.IDs == nil {
-		return nil, fmt.Err("device_manager: Deps.IDs is required")
+		return nil, fmt.Err("device_manager: Deps.IDs %s", lang.Text("is required"))
 	}
 	if deps.TenantID == "" {
-		return nil, fmt.Err("device_manager: Deps.TenantID is required")
+		return nil, fmt.Err("device_manager: Deps.TenantID %s", lang.Text("is required"))
 	}
 	return &Module{db: db, ids: deps.IDs, pub: deps.Publisher, tenantID: deps.TenantID}, nil
 }
