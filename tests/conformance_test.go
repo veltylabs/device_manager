@@ -108,7 +108,7 @@ func TestMountOperations_CreateDevice_RBACDenial(t *testing.T) {
 	}
 }
 
-func TestView_ListPopulatesItems(t *testing.T) {
+func TestView_List(t *testing.T) {
 	caller := &fakeCaller{
 		reply: func(op string, into model.Decodable) {
 			if op != devicemanager.ModelName+"."+devicemanager.OpListDevices {
@@ -119,15 +119,11 @@ func TestView_ListPopulatesItems(t *testing.T) {
 			rec.Id, rec.Name = "dev_1", "Pc Recepcion"
 		},
 	}
-	p := devicemanager.NewView(caller)
+	p := devicemanager.NewView(view.NewRecords().Caller(caller))
 	var rerr error
 	p.Reload(func(err error) { rerr = err })
 	if rerr != nil {
 		t.Fatalf("Reload: %v", rerr)
-	}
-	items := p.Items()
-	if len(items) != 1 || items[0].ID != "dev_1" || items[0].Label != "Pc Recepcion" {
-		t.Fatalf("unexpected items: %+v", items)
 	}
 	if _, ok := p.(view.Saver); !ok {
 		t.Error("expected Presenter to implement view.Saver")

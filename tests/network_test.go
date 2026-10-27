@@ -44,12 +44,12 @@ func TestNetworkHosts_ImportHosts(t *testing.T) {
 	}
 
 	found := []network.Discovered{
-		{MAC: "48:F1:7F:D9:D7:B7", IP: "172.0.0.61", Name: "INTERNET PC-GASTRO-NEW", Internet: true}, // ok, internet, in zone
-		{MAC: "00:1A:2B:00:00:02", IP: "172.0.0.62"},                                                 // ok, local, unnamed
-		{IP: "172.0.0.63", Name: "no mac"},                                                           // skipped: no MAC
-		{MAC: "00:1A:2B:00:00:03", Name: "rule only", Internet: true},                                // skipped: no IP
-		{MAC: "4A:C5:93:7A:12:DE", IP: "172.0.0.64"},                                                 // skipped: randomized
-		{MAC: "00:1A:2B:00:00:01", IP: "10.10.0.5"},                                                  // skipped: registered
+		{MAC: "48:F1:7F:D9:D7:B7", IP: "172.0.0.61", Name: "INTERNET PC-GASTRO-NEW", Internet: true}, // ok, internet, en zona
+		{MAC: "00:1A:2B:00:00:02", IP: "172.0.0.62"},                                                 // ok, local, sin nombre
+		{IP: "172.0.0.63", Name: "no mac"},                                                           // omitido: sin MAC
+		{MAC: "00:1A:2B:00:00:03", Name: "rule only", Internet: true},                                // omitido: sin IP
+		{MAC: "4A:C5:93:7A:12:DE", IP: "172.0.0.64"},                                                 // omitido: MAC aleatorizada
+		{MAC: "00:1A:2B:00:00:01", IP: "10.10.0.5"},                                                  // omitido: ya registrado
 	}
 	res, err := devicemanager.NetworkHosts{Devices: m, TenantID: "tenant-A"}.ImportHosts(found)
 	if err != nil {
@@ -81,7 +81,7 @@ func TestNetworkHosts_ImportHosts(t *testing.T) {
 	}
 }
 
-// deviceInOtherZone creates a device in a zone that does not overlap AP-06.
+// deviceInOtherZone crea un equipo en una zona que no se solapa con AP-06.
 func deviceInOtherZone(t *testing.T, m *devicemanager.Module) (devicemanager.Device, devicemanager.Zone) {
 	t.Helper()
 	z, err := m.SaveZone(devicemanager.Zone{TenantId: "tenant-A", Name: "Servidores", RangeStart: "10.10.0.1", RangeEnd: "10.10.0.9"})
@@ -95,7 +95,7 @@ func deviceInOtherZone(t *testing.T, m *devicemanager.Module) (devicemanager.Dev
 	return d, z
 }
 
-// The forms crudview builds must show exactly the editable fields.
+// Los formularios que construye crudview deben mostrar exactamente los campos editables.
 func TestFormWidgets(t *testing.T) {
 	ids := &mockIDGen{}
 	cases := []struct {

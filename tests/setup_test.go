@@ -15,14 +15,14 @@ type mockIDGen struct{ counter int }
 
 func (g *mockIDGen) NewID() string {
 	g.counter++
-	return "test-id-" + fmt.Convert(g.counter).String() // tinywasm/fmt — stdlib strconv is banned, tests included
+	return "test-id-" + fmt.Convert(g.counter).String() // tinywasm/fmt — la librería estándar strconv está prohibida, incluso en tests
 }
 
 var _ model.IDGenerator = (*mockIDGen)(nil)
 
 type mockPublisher struct{ Events []events.Event }
 
-// events.Publisher.Publish is fire-and-forget: NO error return.
+// events.Publisher.Publish dispara y olvida: NO retorna error.
 func (p *mockPublisher) Publish(e events.Event) {
 	p.Events = append(p.Events, e)
 }
@@ -39,11 +39,11 @@ func setup(t *testing.T) *devicemanager.Module {
 	return m
 }
 
-// testIfaceLabel is the label of the single interface createWithIP adds.
+// testIfaceLabel es la etiqueta de la única interfaz que agrega createWithIP.
 const testIfaceLabel = "lan"
 
-// createWithIP creates d and gives it one interface with ip — what the tests
-// written before interfaces existed meant by "a device with an IP".
+// createWithIP crea d y le asigna una interfaz con ip — a lo que los tests
+// escritos antes de que existieran las interfaces se referían como "un equipo con IP".
 func createWithIP(m *devicemanager.Module, d devicemanager.Device, ip string) (devicemanager.Device, error) {
 	created, err := m.CreateDevice(d)
 	if err != nil {

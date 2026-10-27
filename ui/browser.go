@@ -10,12 +10,6 @@ import (
 	"webtyp.com/view"
 )
 
-// Campos select cuyas opciones provienen de otra lista de este módulo.
-const (
-	fieldZoneID   = "zone_id"
-	fieldDeviceID = "device_id"
-)
-
 // Textos de ayuda que el chasis muestra en el botón «?» de cada pantalla. Las
 // claves están en inglés; la traducción vive en lang.json.
 const (
@@ -35,9 +29,6 @@ func Screens(caller router.Caller) []view.Screen {
 			Icon:       laptop.Ref.ID(),
 			Permission: devicemanager.ResourceDevice,
 			Presenter:  devicemanager.NewView(caller, view.WithDescription(descDevices)),
-			Lookups: []view.Lookup{
-				{Field: fieldZoneID, Source: devicemanager.NewZoneView(caller)},
-			},
 		},
 		{
 			ID:         ZonesID,
@@ -52,9 +43,6 @@ func Screens(caller router.Caller) []view.Screen {
 			Icon:       network.Ref.ID(),
 			Permission: devicemanager.ResourceNetworkInterface,
 			Presenter:  devicemanager.NewNetworkInterfaceView(caller, view.WithDescription(descInterfaces)),
-			Lookups: []view.Lookup{
-				{Field: fieldDeviceID, Source: devicemanager.NewView(caller)},
-			},
 		},
 	}
 }
