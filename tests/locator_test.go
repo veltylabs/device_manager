@@ -27,7 +27,7 @@ func TestIPLocator(t *testing.T) {
 		t.Fatalf("CreateDevice: %v", err)
 	}
 
-	// Create device with same IP on another tenant
+	// Crear equipo con la misma IP en otro tenant
 	_, err = createWithIP(dm, devicemanager.Device{
 		TenantId: "tenant-2",
 		Name:     "Box 1 Tenant 2",
@@ -43,19 +43,19 @@ func TestIPLocator(t *testing.T) {
 		TenantID: "tenant-1",
 	}
 
-	// Existing IP on tenant-1
+	// IP existente en tenant-1
 	id, ok := locator.FindByIP("192.168.1.10")
 	if !ok || id != d1.Id {
 		t.Errorf("FindByIP(192.168.1.10) = (%q, %v), want (%q, true)", id, ok, d1.Id)
 	}
 
-	// Unknown IP
+	// IP desconocida
 	id, ok = locator.FindByIP("10.0.0.1")
 	if ok || id != "" {
 		t.Errorf("FindByIP(10.0.0.1) = (%q, %v), want (\"\", false)", id, ok)
 	}
 
-	// Locator for tenant-3 (no devices)
+	// Localizador para tenant-3 (sin equipos)
 	locator3 := devicemanager.IPLocator{
 		Devices:  dm,
 		TenantID: "tenant-3",
@@ -66,11 +66,11 @@ func TestIPLocator(t *testing.T) {
 	}
 }
 
-// The IP a device is stored under and the IP auth observes at login must be
-// one spelling (input.CanonicalIP), or the same machine is rejected depending
-// on how it connected: "localhost" is ::1 from curl, 127.0.0.1 from Chrome.
-// webtyp.com/auth's ClientIP already returns the canonical form; this module
-// is the other side of that comparison.
+// La IP con la que se guarda un equipo y la IP que auth observa al iniciar sesión
+// deben tener una única forma (input.CanonicalIP), o la misma máquina será rechazada
+// dependiendo de cómo se conectó: "localhost" es ::1 desde curl, 127.0.0.1 desde Chrome.
+// ClientIP de webtyp.com/auth ya devuelve la forma canónica; este módulo
+// es el otro lado de esa comparación.
 func TestIPLocator_CanonicalSpelling(t *testing.T) {
 	db := orm.New(mem.New())
 	dm, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, TenantID: "tenant-1"})

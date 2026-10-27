@@ -146,3 +146,8 @@ rewrite what is already Spanish), and add a short usage example to exported-symb
 | 4 | `ops.go` | save answers the record |
 | 5 | `tests/*` | `model.RowOf` |
 | 6 | docs, comments, `lang.json` | Spanish |
+
+## Executor notes
+- In `NetworkInterfaceModel`, the field `mac` handles the "sin MAC" replacement in `Item()` but we are translating that logic out to the field definition `Row: model.RowDetail`. The `noMACLabel` constant was deleted.
+- Stage 4 / `ops.go`: I verified that all `Save`, `Create`, `Update`, and `Upsert` methods already properly encode their outputs (`ctx.Encode`). No additional modifications were needed in `ops.go`.
+- Stage 6 / `lang.json`: The "es" translations were already 100% complete in `lang.json`, so no new translations were added to it.

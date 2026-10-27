@@ -55,7 +55,7 @@ func TestZone_Overlap(t *testing.T) {
 	if _, err := m.SaveZone(overlap); !isErr(err, devicemanager.ErrZoneOverlap) {
 		t.Fatalf("overlapping zone: err = %v, want ErrZoneOverlap", err)
 	}
-	// Same range in another tenant is fine: zones are per tenant.
+	// Mismo rango en otro tenant es válido: las zonas son por tenant.
 	if _, err := m.SaveZone(zoneAP06("tenant-B")); err != nil {
 		t.Fatalf("same range, other tenant: %v", err)
 	}

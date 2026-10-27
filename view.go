@@ -6,38 +6,6 @@ import (
 	"webtyp.com/view"
 )
 
-// Item implementa view.Itemizer para representar un equipo en listas.
-//
-// Ejemplo: item := d.Item()
-func (d *Device) Item() view.Item {
-	desc := d.Access
-	if d.Location != "" {
-		desc += " · " + d.Location
-	}
-	return view.Item{ID: d.Id, Label: d.Name, Description: desc}
-}
-
-// Item implementa view.Itemizer para representar una zona en listas.
-//
-// Ejemplo: item := z.Item()
-func (z *Zone) Item() view.Item {
-	return view.Item{ID: z.Id, Label: z.Name, Description: z.RangeStart + " – " + z.RangeEnd}
-}
-
-// noMACLabel describe una interfaz que el router no gestiona (sin MAC).
-const noMACLabel = "sin MAC"
-
-// Item implementa view.Itemizer para representar una interfaz de red en listas.
-//
-// Ejemplo: item := ni.Item()
-func (ni *NetworkInterface) Item() view.Item {
-	mac := ni.Mac
-	if mac == "" {
-		mac = noMACLabel
-	}
-	return view.Item{ID: ni.Id, Label: ni.Label, Description: ni.Ip + " · " + mac}
-}
-
 const titleDevices = "Equipos"
 
 // NewView construye el Presenter de equipos — el motor independiente de la tecnología
@@ -45,7 +13,7 @@ const titleDevices = "Equipos"
 //
 // Ejemplo: p := devicemanager.NewView(caller, view.WithDescription("Ayuda..."))
 func NewView(caller router.Caller, opts ...view.Option) view.Presenter {
-	b := view.NewCallerLister(caller,
+	b := view.NewCallerLister(view.NewRecords().Caller(caller),
 		view.Ops{Module: ModelName, List: OpListDevices, Save: OpUpsertDevice, Delete: OpDeleteDevice},
 		func() model.ModelSlice { return &DeviceList{} })
 	allOpts := append([]view.Option{view.WithTitle(titleDevices)}, opts...)
@@ -61,7 +29,7 @@ const (
 //
 // Ejemplo: p := devicemanager.NewZoneView(caller, view.WithDescription("Ayuda..."))
 func NewZoneView(caller router.Caller, opts ...view.Option) view.Presenter {
-	b := view.NewCallerLister(caller,
+	b := view.NewCallerLister(view.NewRecords().Caller(caller),
 		view.Ops{Module: ModelName, List: OpListZones, Save: OpSaveZone, Delete: OpDeleteZone},
 		func() model.ModelSlice { return &ZoneList{} })
 	allOpts := append([]view.Option{view.WithTitle(titleZones)}, opts...)
@@ -72,7 +40,7 @@ func NewZoneView(caller router.Caller, opts ...view.Option) view.Presenter {
 //
 // Ejemplo: p := devicemanager.NewNetworkInterfaceView(caller, view.WithDescription("Ayuda..."))
 func NewNetworkInterfaceView(caller router.Caller, opts ...view.Option) view.Presenter {
-	b := view.NewCallerLister(caller,
+	b := view.NewCallerLister(view.NewRecords().Caller(caller),
 		view.Ops{Module: ModelName, List: OpListNetworkInterfaces, Save: OpSaveNetworkInterface, Delete: OpDeleteNetworkInterface},
 		func() model.ModelSlice { return &NetworkInterfaceList{} })
 	allOpts := append([]view.Option{view.WithTitle(titleNetworkInterfaces)}, opts...)

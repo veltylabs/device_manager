@@ -11,32 +11,32 @@ import (
 	"webtyp.com/storage/mem"
 )
 
-// TestOpListDevices_FallsBackToModuleTenant reproduces a real bug found while
-// manually testing a downstream app's "Equipos" screen: the list showed
-// "0 / 0" even though a real device row existed for the app's tenant.
+// TestOpListDevices_FallsBackToModuleTenant reproduce un bug real encontrado al
+// probar manualmente la pantalla "Equipos" de una app derivada: la lista mostraba
+// "0 / 0" aunque existía una fila real de equipo para el tenant de la app.
 //
-// Root cause: webtyp.com/view's callerLister.list() — the code every
-// crudview-backed list runs on Reload() — always calls the List op with NO
-// args (see router.Caller's own doc: this is correct, by design, since a
-// List op is written to tolerate an absent/empty args object). opListDevices
-// therefore receives ListDevicesArgs{TenantId: ""} on every real page load,
-// and ListDevices("", filter) legitimately (and silently — no error) finds
-// zero rows, because no real device has tenant_id == "".
+// Causa raíz: callerLister.list() de webtyp.com/view — el código que cada
+// lista respaldada por crudview ejecuta en Reload() — siempre llama a la op List SIN
+// argumentos (ver la propia documentación de router.Caller: esto es correcto, por diseño, ya que una
+// op List se escribe para tolerar un objeto args ausente/vacío). opListDevices
+// por lo tanto recibe ListDevicesArgs{TenantId: ""} en cada carga de página real,
+// y ListDevices("", filter) legítimamente (y silenciosamente — sin error) encuentra
+// cero filas, porque ningún equipo real tiene tenant_id == "".
 //
-// Every OTHER caller of this op (an app's own explicit filtered query) can
-// still pass a real tenant_id and gets a correct, scoped result — this bug
-// affects ONLY the args-less path the UI actually uses on every page load.
+// Cualquier OTRO caller de esta op (una consulta filtrada explícita de una app propia) puede
+// seguir pasando un tenant_id real y obtiene un resultado acotado correcto — este bug
+// afecta SOLAMENTE la ruta sin argumentos que la UI usa de verdad en cada carga de página.
 //
-// github.com/veltylabs/staff_manager already solves this exact problem:
-// Deps carries a TenantID, New requires it, and opListStaff falls back to it
-// when the caller's args are empty. device_manager has no such field or
-// fallback. This test seeds one device under the module's own configured
-// tenant and invokes OpListDevices with an EMPTY body — exactly what
-// callerLister.list() sends — expecting that seeded row back.
+// github.com/veltylabs/staff_manager ya resuelve este problema exacto:
+// Deps lleva un TenantID, New lo requiere, y opListStaff retrocede a él
+// cuando los argumentos del caller están vacíos. device_manager no tiene ese campo ni
+// fallback. Este test siembra un equipo bajo el tenant propio configurado del módulo
+// e invoca OpListDevices con un cuerpo VACÍO — exactamente lo que
+// callerLister.list() envía — esperando esa fila sembrada de vuelta.
 //
-// It does not compile today (devicemanager.Deps has no TenantID field) —
-// that is the intended red state; adding the field and the fallback is
-// stage 1 of docs/PLAN.md.
+// Hoy no compila (devicemanager.Deps no tiene el campo TenantID) —
+// ese es el estado rojo esperado; agregar el campo y el fallback es
+// la etapa 1 de docs/PLAN.md.
 func TestOpListDevices_FallsBackToModuleTenant(t *testing.T) {
 	const moduleTenant = "mjosefa-cms"
 
@@ -63,7 +63,7 @@ func TestOpListDevices_FallsBackToModuleTenant(t *testing.T) {
 		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
 	})
 
-	// The exact wire shape view.NewCallerLister sends: no args at all.
+	// La forma exacta del cable que view.NewRecords().Caller envía: ningún argumento en absoluto.
 	ctx := &mock.Context{InBody: []byte(`{}`)}
 	ctx.SetUserID("test-user")
 	reg.Invoke("OP", "/"+devicemanager.OpListDevices, ctx)

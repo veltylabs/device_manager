@@ -28,12 +28,12 @@ func TestTenantIsolation(t *testing.T) {
 		t.Fatalf("failed to create tenant A device: %v", err)
 	}
 
-	// 1. Tenant B must NOT be able to Get tenant A's device
+	// 1. Tenant B NO debe poder hacer Get al equipo del tenant A
 	if _, err := m.GetDevice(tenantB, created.Id); !isErr(err, devicemanager.ErrNotFound) {
 		t.Errorf("expected ErrNotFound for tenant B getting tenant A's device, got %v", err)
 	}
 
-	// 2. Tenant B must NOT be able to Update tenant A's device
+	// 2. Tenant B NO debe poder hacer Update al equipo del tenant A
 	hijack := created
 	hijack.TenantId = tenantB
 	hijack.Name = "Hijacked Name"
@@ -41,17 +41,17 @@ func TestTenantIsolation(t *testing.T) {
 		t.Errorf("expected ErrNotFound for tenant B updating tenant A's device, got %v", err)
 	}
 
-	// 3. Tenant B must NOT be able to Deactivate tenant A's device
+	// 3. Tenant B NO debe poder desactivar (Deactivate) el equipo del tenant A
 	if err := m.DeactivateDevice(tenantB, created.Id); !isErr(err, devicemanager.ErrNotFound) {
 		t.Errorf("expected ErrNotFound for tenant B deactivating tenant A's device, got %v", err)
 	}
 
-	// 4. Tenant B must NOT be able to Delete tenant A's device
+	// 4. Tenant B NO debe poder eliminar (Delete) el equipo del tenant A
 	if err := m.DeleteDevice(tenantB, created.Id); !isErr(err, devicemanager.ErrNotFound) {
 		t.Errorf("expected ErrNotFound for tenant B deleting tenant A's device, got %v", err)
 	}
 
-	// 5. Tenant B registering the SAME ip as tenant A must be allowed (uniqueness is per tenant)
+	// 5. Que Tenant B registre la MISMA ip que el tenant A debe estar permitido (la unicidad es por tenant)
 	if _, err := createWithIP(m, devicemanager.Device{TenantId: tenantB, Name: "Tenant B Device", Type: devicemanager.DeviceTypeComputer, IsActive: true}, "172.16.0.1"); err != nil {
 		t.Errorf("expected tenant B to reuse tenant A's ip independently, got %v", err)
 	}

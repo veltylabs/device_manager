@@ -8,12 +8,13 @@ import (
 	"webtyp.com/icons/laptop"
 	"webtyp.com/icons/location"
 	"webtyp.com/icons/network"
+	"webtyp.com/view"
 )
 
 // Las tres pantallas se explican solas, validan según view.Screen y cada una tiene su propio dibujo y permiso.
 func TestUI_ScreensAreDescribedWithTheirOwnIcon(t *testing.T) {
 	fake := &uiFakeCaller{}
-	screens := ui.Screens(fake)
+	screens := ui.Screens(view.NewRecords().Caller(fake))
 	if len(screens) != 3 {
 		t.Fatalf("expected 3 screens, got %d", len(screens))
 	}
