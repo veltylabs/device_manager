@@ -65,6 +65,10 @@ func (m *Device) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (m *Device) Item() model.Item {
+	return model.Item{ID: m.Id, Label: m.Name, Description: model.JoinItem(m.Location, m.Access)}
+}
+
 var Device_ = struct {
 	Id string
 	TenantId string
@@ -152,6 +156,10 @@ func (m *Zone) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (m *Zone) Item() model.Item {
+	return model.Item{ID: m.Id, Label: m.Name, Description: model.JoinItem(m.RangeStart, m.RangeEnd)}
+}
+
 var Zone_ = struct {
 	Id string
 	TenantId string
@@ -234,6 +242,10 @@ func (s *NetworkInterfaceList) DecodeFields(_ model.FieldReader) {}
 
 func (m *NetworkInterface) Validate(action byte) error {
 	return model.ValidateFields(action, m)
+}
+
+func (m *NetworkInterface) Item() model.Item {
+	return model.Item{ID: m.Id, Label: m.Label, Description: model.JoinItem(m.Mac, m.Ip)}
 }
 
 var NetworkInterface_ = struct {
