@@ -2,8 +2,10 @@
 PLAN: "refactor: screens save and delete through view.MountSave/MountDelete; errors through rpc.WriteError; resources from the tables; English menu keys"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 9389973514273114292
+PR: https://github.com/veltylabs/device_manager/pull/11
+REVIEWED_COMMIT: 28fc95211379cfdcebc96bbf068901627599e348
 ---
 
 > Read AGENTS.md at the repo root before any change.
