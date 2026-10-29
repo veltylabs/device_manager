@@ -1,12 +1,12 @@
 package ui
 
 import (
-	"webtyp.com/model"
 	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/icons/laptop"
 	"webtyp.com/icons/location"
 	"webtyp.com/icons/network"
 	"webtyp.com/lang"
+	"webtyp.com/model"
 	"webtyp.com/router"
 	"webtyp.com/view"
 )

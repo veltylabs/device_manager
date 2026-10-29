@@ -175,12 +175,10 @@ var DeleteNetworkInterfaceArgsModel = model.Definition{
 	},
 }
 
-// Constantes de nombres de recursos y etiquetas.
+// ImportedInterfaceLabel es la etiqueta de la interfaz creada al importar hosts.
 //
-// Constantes de etiquetas.
-const (
-	ImportedInterfaceLabel   = "imported"
-)
+// Ejemplo: ni.Label = devicemanager.ImportedInterfaceLabel
+const ImportedInterfaceLabel = "imported"
 
 // Errores de dominio del módulo.
 //
@@ -200,8 +198,6 @@ const (
 	ErrInvalidZoneRange  model.Invalid  = "zone range must be two IPv4 addresses with start <= end"
 	ErrCannotRead        model.Invalid  = "device_manager: cannot read the request"
 )
-
-//
 
 // Tópicos de eventos publicados por el módulo. El tenant_id viaja en el payload del evento, nunca en el tópico.
 //

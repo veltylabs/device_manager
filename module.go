@@ -35,12 +35,19 @@ type Module struct {
 // preexistente — ver el subpaquete migrate.
 //
 // Ejemplo: dm, err := devicemanager.New(db, deps)
+// Nombres de las dependencias que New exige: son dato (código), no texto a traducir;
+// por eso son variables y no constantes (langc traduce las constantes que recibe fmt.Err).
+var (
+	errDepsIDs      = "device_manager: Deps.IDs"
+	errDepsTenantID = "device_manager: Deps.TenantID"
+)
+
 func New(db *orm.DB, deps Deps) (*Module, error) {
 	if deps.IDs == nil {
-		return nil, fmt.Err("device_manager: Deps.IDs %s", lang.Text("is required"))
+		return nil, fmt.Err(errDepsIDs, lang.Text("is required"))
 	}
 	if deps.TenantID == "" {
-		return nil, fmt.Err("device_manager: Deps.TenantID %s", lang.Text("is required"))
+		return nil, fmt.Err(errDepsTenantID, lang.Text("is required"))
 	}
 	return &Module{db: db, ids: deps.IDs, pub: deps.Publisher, tenantID: deps.TenantID}, nil
 }

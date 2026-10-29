@@ -9,6 +9,14 @@ import (
 // Direcciones IP y MAC fijas de demostración (administradas globalmente, no aleatorias).
 //
 // Ejemplo: ip := seed.ReceptionIP
+// Prefijos de los errores de Load: el paso que falló, como dato (variables: langc
+// traduce las constantes que recibe fmt.Err, y esto es código, no texto).
+var (
+	errSeedSaveZone             = "seed: SaveZone"
+	errSeedCreateDevice         = "seed: CreateDevice"
+	errSeedSaveNetworkInterface = "seed: SaveNetworkInterface"
+)
+
 const (
 	ReceptionIP = "192.168.1.10"
 	Box1IP      = "192.168.1.11"
@@ -41,7 +49,7 @@ func Load(m *devicemanager.Module, tenantID string) (Data, error) {
 	zone, err := m.SaveZone(devicemanager.Zone{TenantId: tenantID, Name: zoneName,
 		RangeStart: zoneRangeStart, RangeEnd: zoneRangeEnd})
 	if err != nil {
-		return Data{}, fmt.Err("seed: SaveZone", zoneName, err)
+		return Data{}, fmt.Err(errSeedSaveZone, zoneName, err)
 	}
 	res := Data{Zones: []devicemanager.Zone{zone}}
 
@@ -59,12 +67,12 @@ func Load(m *devicemanager.Module, tenantID string) (Data, error) {
 	for _, d := range demo {
 		created, err := m.CreateDevice(d.device)
 		if err != nil {
-			return Data{}, fmt.Err("seed: CreateDevice", d.device.Name, err)
+			return Data{}, fmt.Err(errSeedCreateDevice, d.device.Name, err)
 		}
 		ni, err := m.SaveNetworkInterface(devicemanager.NetworkInterface{TenantId: tenantID,
 			DeviceId: created.Id, Label: ethernetLabel, Mac: d.mac, Ip: d.ip})
 		if err != nil {
-			return Data{}, fmt.Err("seed: SaveNetworkInterface", d.device.Name, d.ip, err)
+			return Data{}, fmt.Err(errSeedSaveNetworkInterface, d.device.Name, d.ip, err)
 		}
 		res.Devices = append(res.Devices, created)
 		res.Interfaces = append(res.Interfaces, ni)

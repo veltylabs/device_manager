@@ -69,5 +69,8 @@ Los datos de demostración pueden cargarse usando `seed.Load(m, tenantID)`.
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Alcance del dominio, entidades, patrones, tabla de operaciones |
 | [Diagrama de base de datos](docs/diagrams/database.md) | Diagrama ER en Mermaid |
 
+## Pantallas, errores y permisos
 
-las pantallas guardan y borran con `view.MountSave`/`MountDelete`; errores por `rpc.WriteError`; permisos por tabla con `model.ResourceOf`.
+Las pantallas guardan y borran con `view.MountSave` / `view.MountDelete`; los errores salen por
+`rpc.WriteError` (cada error del módulo es `model.NotFound`, `model.Conflict` o `model.Invalid`), y los
+permisos se nombran con la tabla: `model.ResourceOf(&devicemanager.DeviceModel)`.
