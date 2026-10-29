@@ -2,8 +2,10 @@
 PLAN: "refactor: screens save and delete through view.MountSave/MountDelete; errors through rpc.WriteError; resources from the tables; English menu keys"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 9389973514273114292
+PR: https://github.com/veltylabs/device_manager/pull/11
+REVIEWED_COMMIT: 28fc95211379cfdcebc96bbf068901627599e348
 ---
 
 > Read AGENTS.md at the repo root before any change.
@@ -122,3 +124,9 @@ GOPRIVATE=webtyp.com/*,github.com/veltylabs/* GOFLAGS=-mod=mod gotest
 | 4 | `ui/module.go`, `lang.json` | `langc sync .` clean |
 | 5 | `tests/*` | suite green |
 | 6 | `README.md` | text present |
+
+## Executor notes
+
+- Stage 6 completed successfully.
+- The test loopback caller requires importing `webtyp.com/rpc` to resolve some dependencies dynamically.
+- Refactored `ops.go` to safely remove deprecated error checking with `model.KindOf(err)` mapped directly to `rpc.WriteError`.

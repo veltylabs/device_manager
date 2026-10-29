@@ -3,6 +3,8 @@ package devicemanager
 import (
 	"webtyp.com/model"
 	"webtyp.com/router"
+	"webtyp.com/rpc"
+	"webtyp.com/view"
 )
 
 // Nombres de operaciones expuestas por el módulo.
@@ -40,20 +42,64 @@ func (m *Module) ModelName() string { return ModelName }
 // MountOperations registra las operaciones del módulo en el registro de operaciones del router.
 //
 // Ejemplo: dm.MountOperations(reg)
+func (m *Module) saveDevice(d *Device) error {
+	d.TenantId = m.tenantOr(d.TenantId)
+	var out Device
+	var err error
+	if d.Id == "" {
+		out, err = m.CreateDevice(*d)
+	} else {
+		out, err = m.UpdateDevice(*d)
+	}
+	*d = out
+	return err
+}
+
 func (m *Module) MountOperations(reg router.OperationRegistry) {
-	reg.Operation(OpListDevices, m.opListDevices).Requires(ResourceDevice, model.Read).Accepts(&ListDevicesArgs{})
-	reg.Operation(OpGetDevice, m.opGetDevice).Requires(ResourceDevice, model.Read).Accepts(&GetDeviceArgs{})
-	reg.Operation(OpCreateDevice, m.opCreateDevice).Requires(ResourceDevice, model.Create).Accepts(&Device{})
-	reg.Operation(OpUpdateDevice, m.opUpdateDevice).Requires(ResourceDevice, model.Update).Accepts(&Device{})
-	reg.Operation(OpUpsertDevice, m.opUpsertDevice).Requires(ResourceDevice, model.Create|model.Update).Accepts(&Device{})
-	reg.Operation(OpDeactivateDevice, m.opDeactivateDevice).Requires(ResourceDevice, model.Update).Accepts(&DeactivateDeviceArgs{})
-	reg.Operation(OpDeleteDevice, m.opDeleteDevice).Requires(ResourceDevice, model.Delete).Accepts(&DeleteDeviceArgs{})
-	reg.Operation(OpListZones, m.opListZones).Requires(ResourceZone, model.Read).Accepts(&ListZonesArgs{})
-	reg.Operation(OpSaveZone, m.opSaveZone).Requires(ResourceZone, model.Create|model.Update).Accepts(&Zone{})
-	reg.Operation(OpDeleteZone, m.opDeleteZone).Requires(ResourceZone, model.Delete).Accepts(&DeleteZoneArgs{})
-	reg.Operation(OpListNetworkInterfaces, m.opListNetworkInterfaces).Requires(ResourceNetworkInterface, model.Read).Accepts(&ListNetworkInterfacesArgs{})
-	reg.Operation(OpSaveNetworkInterface, m.opSaveNetworkInterface).Requires(ResourceNetworkInterface, model.Create|model.Update).Accepts(&NetworkInterface{})
-	reg.Operation(OpDeleteNetworkInterface, m.opDeleteNetworkInterface).Requires(ResourceNetworkInterface, model.Delete).Accepts(&DeleteNetworkInterfaceArgs{})
+	reg.Operation(OpListDevices, m.opListDevices).Requires(model.ResourceOf(&DeviceModel), model.Read).Accepts(&ListDevicesArgs{})
+	reg.Operation(OpGetDevice, m.opGetDevice).Requires(model.ResourceOf(&DeviceModel), model.Read).Accepts(&GetDeviceArgs{})
+	reg.Operation(OpCreateDevice, m.opCreateDevice).Requires(model.ResourceOf(&DeviceModel), model.Create).Accepts(&Device{})
+	reg.Operation(OpUpdateDevice, m.opUpdateDevice).Requires(model.ResourceOf(&DeviceModel), model.Update).Accepts(&Device{})
+	view.MountSave(reg, OpUpsertDevice, m.saveDevice).Requires(model.ResourceOf(&DeviceModel), model.Create|model.Update)
+	reg.Operation(OpDeactivateDevice, m.opDeactivateDevice).Requires(model.ResourceOf(&DeviceModel), model.Update).Accepts(&DeactivateDeviceArgs{})
+	view.MountDelete(reg, OpDeleteDevice, func(ids []string) error {
+		for _, id := range ids {
+			if err := m.DeleteDevice(m.tenantID, id); err != nil {
+				return err
+			}
+		}
+		return nil
+	}).Requires(model.ResourceOf(&DeviceModel), model.Delete)
+	reg.Operation(OpListZones, m.opListZones).Requires(model.ResourceOf(&ZoneModel), model.Read).Accepts(&ListZonesArgs{})
+	view.MountSave(reg, OpSaveZone, func(z *Zone) error {
+		z.TenantId = m.tenantOr(z.TenantId)
+		out, err := m.SaveZone(*z)
+		*z = out
+		return err
+	}).Requires(model.ResourceOf(&ZoneModel), model.Create|model.Update)
+	view.MountDelete(reg, OpDeleteZone, func(ids []string) error {
+		for _, id := range ids {
+			if err := m.DeleteZone(m.tenantID, id); err != nil {
+				return err
+			}
+		}
+		return nil
+	}).Requires(model.ResourceOf(&ZoneModel), model.Delete)
+	reg.Operation(OpListNetworkInterfaces, m.opListNetworkInterfaces).Requires(model.ResourceOf(&NetworkInterfaceModel), model.Read).Accepts(&ListNetworkInterfacesArgs{})
+	view.MountSave(reg, OpSaveNetworkInterface, func(ni *NetworkInterface) error {
+		ni.TenantId = m.tenantOr(ni.TenantId)
+		out, err := m.SaveNetworkInterface(*ni)
+		*ni = out
+		return err
+	}).Requires(model.ResourceOf(&NetworkInterfaceModel), model.Create|model.Update)
+	view.MountDelete(reg, OpDeleteNetworkInterface, func(ids []string) error {
+		for _, id := range ids {
+			if err := m.DeleteNetworkInterface(m.tenantID, id); err != nil {
+				return err
+			}
+		}
+		return nil
+	}).Requires(model.ResourceOf(&NetworkInterfaceModel), model.Delete)
 }
 
 var _ router.OperationModule = (*Module)(nil)
@@ -61,7 +107,7 @@ var _ router.OperationModule = (*Module)(nil)
 func (m *Module) opListDevices(ctx router.Context) {
 	var args ListDevicesArgs
 	if err := ctx.Decode(&args); err != nil {
-		ctx.WriteStatus(400)
+		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
 	tenantID := args.TenantId
@@ -71,7 +117,7 @@ func (m *Module) opListDevices(ctx router.Context) {
 	filter := DeviceFilter{Type: args.Type, ActiveOnly: args.ActiveOnly, Limit: args.Limit, Offset: args.Offset}
 	devices, err := m.ListDevices(tenantID, filter)
 	if err != nil {
-		ctx.WriteStatus(500)
+		rpc.WriteError(ctx, err)
 		return
 	}
 	list := make(DeviceList, len(devices))
@@ -79,153 +125,69 @@ func (m *Module) opListDevices(ctx router.Context) {
 		list[i] = &devices[i]
 	}
 	if err := ctx.Encode(&list); err != nil {
-		ctx.WriteStatus(500)
+		rpc.WriteError(ctx, err)
 	}
 }
 
 func (m *Module) opGetDevice(ctx router.Context) {
 	var args GetDeviceArgs
 	if err := ctx.Decode(&args); err != nil {
-		ctx.WriteStatus(400)
+		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
 	d, err := m.GetDevice(args.TenantId, args.Id)
 	if err != nil {
-		if e, ok := err.(domainError); ok && e == ErrNotFound {
-			ctx.WriteStatus(404)
-		} else {
-			ctx.WriteStatus(500)
-		}
+		rpc.WriteError(ctx, err)
 		return
 	}
 	if err := ctx.Encode(&d); err != nil {
-		ctx.WriteStatus(500)
+		rpc.WriteError(ctx, err)
 	}
 }
 
 func (m *Module) opCreateDevice(ctx router.Context) {
 	var d Device
 	if err := ctx.Decode(&d); err != nil {
-		ctx.WriteStatus(400)
+		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
 	created, err := m.CreateDevice(d)
 	if err != nil {
-		if _, ok := err.(ValidationError); ok {
-			ctx.WriteStatus(400)
-		} else if e, ok := err.(domainError); ok && e == ErrIPAlreadyExists {
-			ctx.WriteStatus(409)
-		} else {
-			ctx.WriteStatus(500)
-		}
+		rpc.WriteError(ctx, err)
 		return
 	}
 	if err := ctx.Encode(&created); err != nil {
-		ctx.WriteStatus(500)
+		rpc.WriteError(ctx, err)
 	}
 }
 
 func (m *Module) opUpdateDevice(ctx router.Context) {
 	var d Device
 	if err := ctx.Decode(&d); err != nil {
-		ctx.WriteStatus(400)
+		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
 	updated, err := m.UpdateDevice(d)
 	if err != nil {
-		if _, ok := err.(ValidationError); ok {
-			ctx.WriteStatus(400)
-		} else if e, ok := err.(domainError); ok && e == ErrNotFound {
-			ctx.WriteStatus(404)
-		} else {
-			ctx.WriteStatus(500)
-		}
+		rpc.WriteError(ctx, err)
 		return
 	}
 	if err := ctx.Encode(&updated); err != nil {
-		ctx.WriteStatus(500)
-	}
-}
-
-func (m *Module) opUpsertDevice(ctx router.Context) {
-	var d Device
-	if err := ctx.Decode(&d); err != nil {
-		ctx.WriteStatus(400)
-		return
-	}
-	var out Device
-	var err error
-	if d.Id == "" {
-		out, err = m.CreateDevice(d)
-	} else {
-		out, err = m.UpdateDevice(d)
-	}
-	if err != nil {
-		if _, ok := err.(ValidationError); ok {
-			ctx.WriteStatus(400)
-		} else if e, ok := err.(domainError); ok && e == ErrIPAlreadyExists {
-			ctx.WriteStatus(409)
-		} else if e, ok := err.(domainError); ok && e == ErrNotFound {
-			ctx.WriteStatus(404)
-		} else {
-			ctx.WriteStatus(500)
-		}
-		return
-	}
-	if err := ctx.Encode(&out); err != nil {
-		ctx.WriteStatus(500)
+		rpc.WriteError(ctx, err)
 	}
 }
 
 func (m *Module) opDeactivateDevice(ctx router.Context) {
 	var args DeactivateDeviceArgs
 	if err := ctx.Decode(&args); err != nil {
-		ctx.WriteStatus(400)
+		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
 	if err := m.DeactivateDevice(args.TenantId, args.Id); err != nil {
-		if e, ok := err.(domainError); ok && e == ErrNotFound {
-			ctx.WriteStatus(404)
-		} else {
-			ctx.WriteStatus(500)
-		}
+		rpc.WriteError(ctx, err)
 		return
 	}
 	ctx.WriteStatus(200)
-}
-
-func (m *Module) opDeleteDevice(ctx router.Context) {
-	var args DeleteDeviceArgs
-	if err := ctx.Decode(&args); err != nil {
-		ctx.WriteStatus(400)
-		return
-	}
-	if err := m.DeleteDevice(args.TenantId, args.Id); err != nil {
-		if e, ok := err.(domainError); ok && e == ErrNotFound {
-			ctx.WriteStatus(404)
-		} else {
-			ctx.WriteStatus(500)
-		}
-		return
-	}
-	ctx.WriteStatus(200)
-}
-
-// statusFor maps a zone/interface service error to its HTTP status (AGENTS.md
-// convention): the one place these sentinels are classified.
-func statusFor(err error) int {
-	if _, ok := err.(ValidationError); ok {
-		return 400
-	}
-	if e, ok := err.(domainError); ok {
-		switch e {
-		case ErrNotFound, ErrZoneNotFound, ErrInterfaceNotFound:
-			return 404
-		case ErrIPAlreadyExists, ErrMACAlreadyExists, ErrZoneOverlap, ErrZoneInUse, ErrZoneFull:
-			return 409
-		}
-	}
-	return 500
 }
 
 // tenantOr returns id, or the installation's tenant when the caller sent none
@@ -240,12 +202,12 @@ func (m *Module) tenantOr(id string) string {
 func (m *Module) opListZones(ctx router.Context) {
 	var args ListZonesArgs
 	if err := ctx.Decode(&args); err != nil {
-		ctx.WriteStatus(400)
+		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
 	zones, err := m.ListZones(m.tenantOr(args.TenantId))
 	if err != nil {
-		ctx.WriteStatus(500)
+		rpc.WriteError(ctx, err)
 		return
 	}
 	list := make(ZoneList, len(zones))
@@ -253,49 +215,19 @@ func (m *Module) opListZones(ctx router.Context) {
 		list[i] = &zones[i]
 	}
 	if err := ctx.Encode(&list); err != nil {
-		ctx.WriteStatus(500)
+		rpc.WriteError(ctx, err)
 	}
-}
-
-func (m *Module) opSaveZone(ctx router.Context) {
-	var z Zone
-	if err := ctx.Decode(&z); err != nil {
-		ctx.WriteStatus(400)
-		return
-	}
-	z.TenantId = m.tenantOr(z.TenantId)
-	saved, err := m.SaveZone(z)
-	if err != nil {
-		ctx.WriteStatus(statusFor(err))
-		return
-	}
-	if err := ctx.Encode(&saved); err != nil {
-		ctx.WriteStatus(500)
-	}
-}
-
-func (m *Module) opDeleteZone(ctx router.Context) {
-	var args DeleteZoneArgs
-	if err := ctx.Decode(&args); err != nil {
-		ctx.WriteStatus(400)
-		return
-	}
-	if err := m.DeleteZone(m.tenantOr(args.TenantId), args.Id); err != nil {
-		ctx.WriteStatus(statusFor(err))
-		return
-	}
-	ctx.WriteStatus(200)
 }
 
 func (m *Module) opListNetworkInterfaces(ctx router.Context) {
 	var args ListNetworkInterfacesArgs
 	if err := ctx.Decode(&args); err != nil {
-		ctx.WriteStatus(400)
+		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
 	ifaces, err := m.ListNetworkInterfaces(m.tenantOr(args.TenantId), args.DeviceId)
 	if err != nil {
-		ctx.WriteStatus(500)
+		rpc.WriteError(ctx, err)
 		return
 	}
 	list := make(NetworkInterfaceList, len(ifaces))
@@ -303,36 +235,7 @@ func (m *Module) opListNetworkInterfaces(ctx router.Context) {
 		list[i] = &ifaces[i]
 	}
 	if err := ctx.Encode(&list); err != nil {
-		ctx.WriteStatus(500)
+		rpc.WriteError(ctx, err)
 	}
 }
 
-func (m *Module) opSaveNetworkInterface(ctx router.Context) {
-	var ni NetworkInterface
-	if err := ctx.Decode(&ni); err != nil {
-		ctx.WriteStatus(400)
-		return
-	}
-	ni.TenantId = m.tenantOr(ni.TenantId)
-	saved, err := m.SaveNetworkInterface(ni)
-	if err != nil {
-		ctx.WriteStatus(statusFor(err))
-		return
-	}
-	if err := ctx.Encode(&saved); err != nil {
-		ctx.WriteStatus(500)
-	}
-}
-
-func (m *Module) opDeleteNetworkInterface(ctx router.Context) {
-	var args DeleteNetworkInterfaceArgs
-	if err := ctx.Decode(&args); err != nil {
-		ctx.WriteStatus(400)
-		return
-	}
-	if err := m.DeleteNetworkInterface(m.tenantOr(args.TenantId), args.Id); err != nil {
-		ctx.WriteStatus(statusFor(err))
-		return
-	}
-	ctx.WriteStatus(200)
-}

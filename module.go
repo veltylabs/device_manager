@@ -35,12 +35,19 @@ type Module struct {
 // preexistente — ver el subpaquete migrate.
 //
 // Ejemplo: dm, err := devicemanager.New(db, deps)
+// Nombres de las dependencias que New exige: son dato (código), no texto a traducir;
+// por eso son variables y no constantes (langc traduce las constantes que recibe fmt.Err).
+var (
+	errDepsIDs      = "device_manager: Deps.IDs"
+	errDepsTenantID = "device_manager: Deps.TenantID"
+)
+
 func New(db *orm.DB, deps Deps) (*Module, error) {
 	if deps.IDs == nil {
-		return nil, fmt.Err("device_manager: Deps.IDs %s", lang.Text("is required"))
+		return nil, fmt.Err(errDepsIDs, lang.Text("is required"))
 	}
 	if deps.TenantID == "" {
-		return nil, fmt.Err("device_manager: Deps.TenantID %s", lang.Text("is required"))
+		return nil, fmt.Err(errDepsTenantID, lang.Text("is required"))
 	}
 	return &Module{db: db, ids: deps.IDs, pub: deps.Publisher, tenantID: deps.TenantID}, nil
 }
@@ -128,20 +135,17 @@ func isValidDeviceType(t string) bool {
 // validateDevice ejecuta todas las validaciones de escritura para un equipo.
 func (m *Module) validateDevice(d Device, action byte) error {
 	if err := d.Validate(action); err != nil {
-		return ValidationError{Err: err}
+		return err
 	}
 	if !isValidDeviceType(d.Type) {
-		return ValidationError{Err: fmt.Err("invalid device type: %s", d.Type)}
+		return &model.FieldError{Field: "type", Err: fmt.Err("invalid device type: %s", d.Type)}
 	}
 	if _, err := network.ParseAccess(d.Access); err != nil {
-		return ValidationError{Err: err}
+		return err
 	}
 	if d.ZoneId != "" {
 		if _, err := m.GetZone(d.TenantId, d.ZoneId); err != nil {
-			if e, ok := err.(domainError); ok && e == ErrZoneNotFound {
-				return ValidationError{Err: err}
-			}
-			return err
+			return &model.FieldError{Field: "zone_id", Err: err}
 		}
 	}
 	return nil

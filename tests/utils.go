@@ -1,5 +1,7 @@
 package tests
 
+import "webtyp.com/model"
+
 func isErr(err error, target error) bool {
     if err == nil {
         return target == nil
@@ -7,5 +9,5 @@ func isErr(err error, target error) bool {
     if target == nil {
         return false
     }
-    return err.Error() == target.Error()
+    return model.KindOf(err) == model.KindOf(target) && err.Error() == target.Error()
 }

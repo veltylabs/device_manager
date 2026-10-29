@@ -2,6 +2,7 @@ package devicemanager
 
 import (
 	"webtyp.com/input"
+	"webtyp.com/model"
 	"webtyp.com/network"
 )
 
@@ -117,7 +118,7 @@ func (n NetworkHosts) ImportHosts(found []network.Discovered) (network.ImportRes
 		dev, err := n.Devices.CreateDevice(Device{TenantId: n.TenantID, Name: name, Type: DeviceTypeOther,
 			Access: access, ZoneId: zoneID, IsActive: true})
 		if err != nil {
-			if _, isValidation := err.(ValidationError); isValidation {
+			if model.KindOf(err) == model.ErrorInvalid {
 				skip(err.Error())
 				continue
 			}
@@ -130,11 +131,11 @@ func (n NetworkHosts) ImportHosts(found []network.Discovered) (network.ImportRes
 			if delErr := n.Devices.DeleteDevice(n.TenantID, dev.Id); delErr != nil {
 				return res, delErr
 			}
-			if _, isValidation := err.(ValidationError); isValidation {
+			if model.KindOf(err) == model.ErrorInvalid {
 				skip(err.Error())
 				continue
 			}
-			if e, ok := err.(domainError); ok && e == ErrIPAlreadyExists {
+			if model.KindOf(err) == model.ErrorConflict {
 				skip(err.Error())
 				continue
 			}

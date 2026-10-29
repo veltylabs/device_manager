@@ -63,7 +63,7 @@ func (m *Module) SaveNetworkInterface(ni NetworkInterface) (NetworkInterface, er
 	if ni.Mac != "" {
 		ni.Mac = input.CanonicalMAC(ni.Mac)
 		if input.IsLocallyAdministeredMAC(ni.Mac) {
-			return NetworkInterface{}, ValidationError{Err: ErrRandomizedMAC}
+			return NetworkInterface{}, &model.FieldError{Field: "mac", Err: ErrRandomizedMAC}
 		}
 		var other NetworkInterface
 		dup, err := ReadAllNetworkInterface(m.db.Query(&other).
@@ -92,7 +92,7 @@ func (m *Module) SaveNetworkInterface(ni NetworkInterface) (NetworkInterface, er
 
 	if ni.Ip == "" {
 		if !hasZone {
-			return NetworkInterface{}, ValidationError{Err: ErrNoZone}
+			return NetworkInterface{}, &model.FieldError{Field: "ip", Err: ErrNoZone}
 		}
 		ip, ok := freeIP(zone, all, ni.Id)
 		if !ok {
@@ -105,7 +105,7 @@ func (m *Module) SaveNetworkInterface(ni NetworkInterface) (NetworkInterface, er
 			n, okIP := ipv4ToUint32(ni.Ip)
 			s, e, okZone := zoneRange(zone)
 			if !okIP || !okZone || n < s || n > e {
-				return NetworkInterface{}, ValidationError{Err: ErrIPOutsideZone}
+				return NetworkInterface{}, &model.FieldError{Field: "ip", Err: ErrIPOutsideZone}
 			}
 		}
 		for _, o := range all {
@@ -122,7 +122,7 @@ func (m *Module) SaveNetworkInterface(ni NetworkInterface) (NetworkInterface, er
 	}
 	ni.UpdatedAt = time.NowNano()
 	if err := ni.Validate(action); err != nil {
-		return NetworkInterface{}, ValidationError{Err: err}
+		return NetworkInterface{}, err
 	}
 	if creating {
 		err = m.db.Create(&ni)
