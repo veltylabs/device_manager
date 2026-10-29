@@ -2,8 +2,10 @@
 PLAN: "fix: the tenant always comes from the server (Deps.TenantID); no operation reads tenant_id from the request (D32)"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 7076575831483197165
+PR: https://github.com/veltylabs/device_manager/pull/12
+REVIEWED_COMMIT: adb2360ebf68d7068cf8815a19151edd04845090
 ---
 
 > Read AGENTS.md at the repo root before any change.

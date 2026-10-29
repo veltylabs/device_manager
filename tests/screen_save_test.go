@@ -123,3 +123,56 @@ func TestScreenSave(t *testing.T) {
 		t.Fatal(delErr)
 	}
 }
+
+func TestScreen_SaveIgnoresTenantFromRequest(t *testing.T) {
+	dm := setup(t)
+
+	caller := view.NewRecords().Caller(loopback.ActingAs("tenant-A", "user-1", dm))
+
+	// Device
+	dlister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName, List: devicemanager.OpListDevices, Save: devicemanager.OpUpsertDevice, Delete: devicemanager.OpDeleteDevice}, func() model.ModelSlice { return &devicemanager.DeviceList{} })
+	saver := dlister.(view.Saver)
+
+	d := &devicemanager.Device{TenantId: "other-tenant", Name: "test-device", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true}
+	var saveErr error
+	saver.Save([]model.Model{d}, func(err error) { saveErr = err })
+	if saveErr != nil {
+		t.Fatal(saveErr)
+	}
+
+	listA, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{})
+	if len(listA) != 1 {
+		t.Fatalf("expected 1 device in tenant-A, got %d", len(listA))
+	}
+	if listA[0].TenantId != "tenant-A" {
+		t.Fatalf("expected device to have TenantId 'tenant-A', got %q", listA[0].TenantId)
+	}
+
+	listOther, _ := dm.ListDevices("other-tenant", devicemanager.DeviceFilter{})
+	if len(listOther) != 0 {
+		t.Fatalf("expected 0 devices in other-tenant, got %d", len(listOther))
+	}
+
+	// Zone
+	zlister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName, List: devicemanager.OpListZones, Save: devicemanager.OpSaveZone, Delete: devicemanager.OpDeleteZone}, func() model.ModelSlice { return &devicemanager.ZoneList{} })
+	zsaver := zlister.(view.Saver)
+
+	z := &devicemanager.Zone{TenantId: "other-tenant", Name: "test-zone", RangeStart: "10.0.0.1", RangeEnd: "10.0.0.10"}
+	zsaver.Save([]model.Model{z}, func(err error) { saveErr = err })
+	if saveErr != nil {
+		t.Fatal(saveErr)
+	}
+
+	listZA, _ := dm.ListZones("tenant-A")
+	if len(listZA) != 1 {
+		t.Fatalf("expected 1 zone in tenant-A, got %d", len(listZA))
+	}
+	if listZA[0].TenantId != "tenant-A" {
+		t.Fatalf("expected zone to have TenantId 'tenant-A', got %q", listZA[0].TenantId)
+	}
+
+	listZOther, _ := dm.ListZones("other-tenant")
+	if len(listZOther) != 0 {
+		t.Fatalf("expected 0 zones in other-tenant, got %d", len(listZOther))
+	}
+}
