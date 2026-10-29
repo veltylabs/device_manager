@@ -19,7 +19,7 @@ import (
 // lista respaldada por crudview ejecuta en Reload() — siempre llama a la op List SIN
 // argumentos (ver la propia documentación de router.Caller: esto es correcto, por diseño, ya que una
 // op List se escribe para tolerar un objeto args ausente/vacío). opListDevices
-// por lo tanto recibe ListDevicesArgs{TenantId: ""} en cada carga de página real,
+// por lo tanto recibe ListDevicesArgs{} en cada carga de página real,
 // y ListDevices("", filter) legítimamente (y silenciosamente — sin error) encuentra
 // cero filas, porque ningún equipo real tiene tenant_id == "".
 //

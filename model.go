@@ -91,7 +91,6 @@ var NetworkInterfaceModel = model.Definition{
 var ListDevicesArgsModel = model.Definition{
 	Name: "list_devices_args",
 	Fields: model.Fields{
-		{Name: "tenant_id", Type: model.Text()},
 		{Name: "type", Type: model.Text()},
 		{Name: "active_only", Type: model.Bool()},
 		{Name: "limit", Type: model.Int()},
@@ -105,7 +104,6 @@ var ListDevicesArgsModel = model.Definition{
 var GetDeviceArgsModel = model.Definition{
 	Name: "get_device_args",
 	Fields: model.Fields{
-		{Name: "tenant_id", Type: model.Text()},
 		{Name: "id", Type: model.Text()},
 	},
 }
@@ -116,18 +114,6 @@ var GetDeviceArgsModel = model.Definition{
 var DeactivateDeviceArgsModel = model.Definition{
 	Name: "deactivate_device_args",
 	Fields: model.Fields{
-		{Name: "tenant_id", Type: model.Text()},
-		{Name: "id", Type: model.Text()},
-	},
-}
-
-// DeleteDeviceArgsModel define los argumentos para eliminar un equipo.
-//
-// Ejemplo: def := devicemanager.DeleteDeviceArgsModel
-var DeleteDeviceArgsModel = model.Definition{
-	Name: "delete_device_args",
-	Fields: model.Fields{
-		{Name: "tenant_id", Type: model.Text()},
 		{Name: "id", Type: model.Text()},
 	},
 }
@@ -138,18 +124,6 @@ var DeleteDeviceArgsModel = model.Definition{
 var ListZonesArgsModel = model.Definition{
 	Name: "list_zones_args",
 	Fields: model.Fields{
-		{Name: "tenant_id", Type: model.Text()},
-	},
-}
-
-// DeleteZoneArgsModel define los argumentos para eliminar una zona.
-//
-// Ejemplo: def := devicemanager.DeleteZoneArgsModel
-var DeleteZoneArgsModel = model.Definition{
-	Name: "delete_zone_args",
-	Fields: model.Fields{
-		{Name: "tenant_id", Type: model.Text()},
-		{Name: "id", Type: model.Text()},
 	},
 }
 
@@ -159,19 +133,7 @@ var DeleteZoneArgsModel = model.Definition{
 var ListNetworkInterfacesArgsModel = model.Definition{
 	Name: "list_network_interfaces_args",
 	Fields: model.Fields{
-		{Name: "tenant_id", Type: model.Text()},
 		{Name: "device_id", Type: model.Text()},
-	},
-}
-
-// DeleteNetworkInterfaceArgsModel define los argumentos para eliminar una interfaz de red.
-//
-// Ejemplo: def := devicemanager.DeleteNetworkInterfaceArgsModel
-var DeleteNetworkInterfaceArgsModel = model.Definition{
-	Name: "delete_network_interface_args",
-	Fields: model.Fields{
-		{Name: "tenant_id", Type: model.Text()},
-		{Name: "id", Type: model.Text()},
 	},
 }
 

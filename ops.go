@@ -43,7 +43,7 @@ func (m *Module) ModelName() string { return ModelName }
 //
 // Ejemplo: dm.MountOperations(reg)
 func (m *Module) saveDevice(d *Device) error {
-	d.TenantId = m.tenantOr(d.TenantId)
+	d.TenantId = m.tenantID
 	var out Device
 	var err error
 	if d.Id == "" {
@@ -72,7 +72,7 @@ func (m *Module) MountOperations(reg router.OperationRegistry) {
 	}).Requires(model.ResourceOf(&DeviceModel), model.Delete)
 	reg.Operation(OpListZones, m.opListZones).Requires(model.ResourceOf(&ZoneModel), model.Read).Accepts(&ListZonesArgs{})
 	view.MountSave(reg, OpSaveZone, func(z *Zone) error {
-		z.TenantId = m.tenantOr(z.TenantId)
+		z.TenantId = m.tenantID
 		out, err := m.SaveZone(*z)
 		*z = out
 		return err
@@ -87,7 +87,7 @@ func (m *Module) MountOperations(reg router.OperationRegistry) {
 	}).Requires(model.ResourceOf(&ZoneModel), model.Delete)
 	reg.Operation(OpListNetworkInterfaces, m.opListNetworkInterfaces).Requires(model.ResourceOf(&NetworkInterfaceModel), model.Read).Accepts(&ListNetworkInterfacesArgs{})
 	view.MountSave(reg, OpSaveNetworkInterface, func(ni *NetworkInterface) error {
-		ni.TenantId = m.tenantOr(ni.TenantId)
+		ni.TenantId = m.tenantID
 		out, err := m.SaveNetworkInterface(*ni)
 		*ni = out
 		return err
@@ -110,10 +110,7 @@ func (m *Module) opListDevices(ctx router.Context) {
 		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
-	tenantID := args.TenantId
-	if tenantID == "" {
-		tenantID = m.tenantID
-	}
+	tenantID := m.tenantID
 	filter := DeviceFilter{Type: args.Type, ActiveOnly: args.ActiveOnly, Limit: args.Limit, Offset: args.Offset}
 	devices, err := m.ListDevices(tenantID, filter)
 	if err != nil {
@@ -135,7 +132,7 @@ func (m *Module) opGetDevice(ctx router.Context) {
 		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
-	d, err := m.GetDevice(args.TenantId, args.Id)
+	d, err := m.GetDevice(m.tenantID, args.Id)
 	if err != nil {
 		rpc.WriteError(ctx, err)
 		return
@@ -151,6 +148,7 @@ func (m *Module) opCreateDevice(ctx router.Context) {
 		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
+	d.TenantId = m.tenantID
 	created, err := m.CreateDevice(d)
 	if err != nil {
 		rpc.WriteError(ctx, err)
@@ -167,6 +165,7 @@ func (m *Module) opUpdateDevice(ctx router.Context) {
 		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
+	d.TenantId = m.tenantID
 	updated, err := m.UpdateDevice(d)
 	if err != nil {
 		rpc.WriteError(ctx, err)
@@ -183,20 +182,11 @@ func (m *Module) opDeactivateDevice(ctx router.Context) {
 		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
-	if err := m.DeactivateDevice(args.TenantId, args.Id); err != nil {
+	if err := m.DeactivateDevice(m.tenantID, args.Id); err != nil {
 		rpc.WriteError(ctx, err)
 		return
 	}
 	ctx.WriteStatus(200)
-}
-
-// tenantOr returns id, or the installation's tenant when the caller sent none
-// (every crudview-backed form does) — same fallback as opListDevices.
-func (m *Module) tenantOr(id string) string {
-	if id == "" {
-		return m.tenantID
-	}
-	return id
 }
 
 func (m *Module) opListZones(ctx router.Context) {
@@ -205,7 +195,7 @@ func (m *Module) opListZones(ctx router.Context) {
 		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
-	zones, err := m.ListZones(m.tenantOr(args.TenantId))
+	zones, err := m.ListZones(m.tenantID)
 	if err != nil {
 		rpc.WriteError(ctx, err)
 		return
@@ -225,7 +215,7 @@ func (m *Module) opListNetworkInterfaces(ctx router.Context) {
 		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
-	ifaces, err := m.ListNetworkInterfaces(m.tenantOr(args.TenantId), args.DeviceId)
+	ifaces, err := m.ListNetworkInterfaces(m.tenantID, args.DeviceId)
 	if err != nil {
 		rpc.WriteError(ctx, err)
 		return

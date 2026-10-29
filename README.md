@@ -73,4 +73,4 @@ Los datos de demostración pueden cargarse usando `seed.Load(m, tenantID)`.
 
 Las pantallas guardan y borran con `view.MountSave` / `view.MountDelete`; los errores salen por
 `rpc.WriteError` (cada error del módulo es `model.NotFound`, `model.Conflict` o `model.Invalid`), y los
-permisos se nombran con la tabla: `model.ResourceOf(&devicemanager.DeviceModel)`.
+permisos se nombran con la tabla: `model.ResourceOf(&devicemanager.DeviceModel)`. El tenant lo pone siempre el servidor (`Deps.TenantID`): ninguna operación lee `tenant_id` de la petición, y un registro que llega con otro tenant se guarda en el de esta instalación.
