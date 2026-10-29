@@ -103,15 +103,15 @@ func TestScreenSave(t *testing.T) {
 
 	ni3 := &devicemanager.NetworkInterface{TenantId: "tenant-A", DeviceId: devForConflict2.Id, Label: "eth1"}
 	nisaver.Save([]model.Model{ni3}, func(err error) { saveErr = err })
-	if model.KindOf(saveErr) != model.ErrorInvalid && !strings.Contains(saveErr.Error(), `"status":400`) {
-		t.Fatalf("expected ErrorInvalid (ZoneFull), got kind %v from err %v", model.KindOf(saveErr), saveErr)
+	if !strings.Contains(saveErr.Error(), `"status":409`) {
+		t.Fatalf("expected ErrorConflict (ZoneFull), got %v", saveErr)
 	}
 
 	// Attempt manual IP conflict
 	ni4 := &devicemanager.NetworkInterface{TenantId: "tenant-A", DeviceId: devForConflict2.Id, Label: "eth2", Ip: "10.10.0.1"}
 	nisaver.Save([]model.Model{ni4}, func(err error) { saveErr = err })
-	if model.KindOf(saveErr) != model.ErrorConflict && !strings.Contains(saveErr.Error(), `"status":409`) {
-		t.Fatalf("expected ErrorConflict (IPAlreadyExists), got kind %v from err %v", model.KindOf(saveErr), saveErr)
+	if !strings.Contains(saveErr.Error(), `"status":409`) {
+		t.Fatalf("expected ErrorConflict (IPAlreadyExists), got %v", saveErr)
 	}
 
 	// Cleanup

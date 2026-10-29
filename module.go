@@ -138,7 +138,7 @@ func (m *Module) validateDevice(d Device, action byte) error {
 	}
 	if d.ZoneId != "" {
 		if _, err := m.GetZone(d.TenantId, d.ZoneId); err != nil {
-			return err
+			return &model.FieldError{Field: "zone_id", Err: err}
 		}
 	}
 	return nil

@@ -9,14 +9,14 @@ const ID = "device_manager"
 // Label es el texto para mostrar en el menú de navegación.
 //
 // Ejemplo: label := ui.Label
-const Label = "Equipos"
+const Label = "Devices"
 
 // Identificadores y etiquetas de las pantallas de zonas e interfaces de red.
 //
 // Ejemplo: zonesID := ui.ZonesID
 const (
 	ZonesID         = "device_manager_zones"
-	ZonesLabel      = "Zonas"
+	ZonesLabel      = "Zones"
 	InterfacesID    = "device_manager_interfaces"
-	InterfacesLabel = "Interfaces de red"
+	InterfacesLabel = "Network interfaces"
 )

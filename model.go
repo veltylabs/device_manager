@@ -177,19 +177,14 @@ var DeleteNetworkInterfaceArgsModel = model.Definition{
 
 // Constantes de nombres de recursos y etiquetas.
 //
-// Ejemplo: res := devicemanager.ResourceDevice
+// Constantes de etiquetas.
 const (
-	ResourceDevice           = "device"
-	ResourceZone             = "zone"
-	ResourceNetworkInterface = "network_interface"
 	ImportedInterfaceLabel   = "imported"
 )
 
-
-
 // Errores de dominio del módulo.
 //
-// Ejemplo: if errors.Is(err, devicemanager.ErrNotFound) { ... }
+// Ejemplo: if model.KindOf(err) == model.ErrorNotFound { ... }
 const (
 	ErrNotFound          model.NotFound = "device not found"
 	ErrIPAlreadyExists   model.Conflict = "device ip already exists"
@@ -197,7 +192,7 @@ const (
 	ErrRandomizedMAC     model.Invalid  = "randomized MAC address: on the device, turn off random (private) hardware addresses for this Wi-Fi network and register its real MAC"
 	ErrNoZone            model.Invalid  = "ip is empty and the device has no zone to assign one from"
 	ErrIPOutsideZone     model.Invalid  = "ip is outside the device's zone range"
-	ErrZoneFull          model.Invalid  = "zone has no free ip"
+	ErrZoneFull          model.Conflict = "zone has no free ip"
 	ErrZoneOverlap       model.Conflict = "zone range overlaps another zone"
 	ErrZoneInUse         model.Conflict = "zone is used by a device"
 	ErrZoneNotFound      model.NotFound = "zone not found"
@@ -207,7 +202,6 @@ const (
 )
 
 //
-
 
 // Tópicos de eventos publicados por el módulo. El tenant_id viaja en el payload del evento, nunca en el tópico.
 //

@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"webtyp.com/model"
 	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/icons/laptop"
 	"webtyp.com/icons/location"
@@ -27,21 +28,21 @@ func Screens(caller router.Caller) []view.Screen {
 			ID:         ID,
 			Label:      Label,
 			Icon:       laptop.Ref.ID(),
-			Permission: devicemanager.ResourceDevice,
+			Permission: model.ResourceOf(&devicemanager.DeviceModel),
 			Presenter:  devicemanager.NewView(caller, view.WithDescription(descDevices)),
 		},
 		{
 			ID:         ZonesID,
 			Label:      ZonesLabel,
 			Icon:       location.Ref.ID(),
-			Permission: devicemanager.ResourceZone,
+			Permission: model.ResourceOf(&devicemanager.ZoneModel),
 			Presenter:  devicemanager.NewZoneView(caller, view.WithDescription(descZones)),
 		},
 		{
 			ID:         InterfacesID,
 			Label:      InterfacesLabel,
 			Icon:       network.Ref.ID(),
-			Permission: devicemanager.ResourceNetworkInterface,
+			Permission: model.ResourceOf(&devicemanager.NetworkInterfaceModel),
 			Presenter:  devicemanager.NewNetworkInterfaceView(caller, view.WithDescription(descInterfaces)),
 		},
 	}

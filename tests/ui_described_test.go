@@ -8,6 +8,7 @@ import (
 	"webtyp.com/icons/laptop"
 	"webtyp.com/icons/location"
 	"webtyp.com/icons/network"
+	"webtyp.com/model"
 	"webtyp.com/view"
 )
 
@@ -24,9 +25,9 @@ func TestUI_ScreensAreDescribedWithTheirOwnIcon(t *testing.T) {
 		icon       string
 		permission string
 	}{
-		{ui.ID, laptop.Ref.ID(), string(devicemanager.ResourceDevice)},
-		{ui.ZonesID, location.Ref.ID(), string(devicemanager.ResourceZone)},
-		{ui.InterfacesID, network.Ref.ID(), string(devicemanager.ResourceNetworkInterface)},
+		{ui.ID, laptop.Ref.ID(), string(model.ResourceOf(&devicemanager.DeviceModel))},
+		{ui.ZonesID, location.Ref.ID(), string(model.ResourceOf(&devicemanager.ZoneModel))},
+		{ui.InterfacesID, network.Ref.ID(), string(model.ResourceOf(&devicemanager.NetworkInterfaceModel))},
 	}
 
 	for i, w := range want {
