@@ -17,7 +17,7 @@ require (
 	webtyp.com/storage v0.1.8
 	webtyp.com/svg v0.3.30
 	webtyp.com/time v0.6.2
-	webtyp.com/view v0.6.50
+	webtyp.com/view v0.6.53
 )
 
 require (
@@ -26,7 +26,10 @@ require (
 	webtyp.com/css v0.4.30 // indirect
 	webtyp.com/dom v0.13.29 // indirect
 	webtyp.com/escape v0.1.0 // indirect
+	webtyp.com/fetch v0.1.29 // indirect
+	webtyp.com/filepath v0.1.0 // indirect
 	webtyp.com/font v0.0.5 // indirect
 	webtyp.com/json v0.5.37 // indirect
+	webtyp.com/rpc v0.2.7 // indirect
 	webtyp.com/widget v0.6.45 // indirect
 )
