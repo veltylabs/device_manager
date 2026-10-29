@@ -2,6 +2,8 @@
 PLAN: "fix: the tenant always comes from the server (Deps.TenantID); no operation reads tenant_id from the request (D32)"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 7076575831483197165
 ---
 
 > Read AGENTS.md at the repo root before any change.
