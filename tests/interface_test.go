@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"webtyp.com/model"
 	"testing"
 
 	devicemanager "github.com/veltylabs/device_manager"
@@ -138,6 +139,6 @@ func TestInterface_FindByIPThroughInterface(t *testing.T) {
 
 // isValidation reporta si err es un ValidationError que envuelve a want.
 func isValidation(err, want error) bool {
-	v, ok := err.(devicemanager.ValidationError)
+	v, ok := err.(*model.FieldError)
 	return ok && v.Err == want
 }

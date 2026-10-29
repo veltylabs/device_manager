@@ -128,19 +128,16 @@ func isValidDeviceType(t string) bool {
 // validateDevice ejecuta todas las validaciones de escritura para un equipo.
 func (m *Module) validateDevice(d Device, action byte) error {
 	if err := d.Validate(action); err != nil {
-		return ValidationError{Err: err}
+		return err
 	}
 	if !isValidDeviceType(d.Type) {
-		return ValidationError{Err: fmt.Err("invalid device type: %s", d.Type)}
+		return &model.FieldError{Field: "type", Err: fmt.Err("invalid device type: %s", d.Type)}
 	}
 	if _, err := network.ParseAccess(d.Access); err != nil {
-		return ValidationError{Err: err}
+		return err
 	}
 	if d.ZoneId != "" {
 		if _, err := m.GetZone(d.TenantId, d.ZoneId); err != nil {
-			if e, ok := err.(domainError); ok && e == ErrZoneNotFound {
-				return ValidationError{Err: err}
-			}
 			return err
 		}
 	}

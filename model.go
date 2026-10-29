@@ -185,34 +185,29 @@ const (
 	ImportedInterfaceLabel   = "imported"
 )
 
-type domainError string
 
-func (e domainError) Error() string { return string(e) }
 
 // Errores de dominio del módulo.
 //
 // Ejemplo: if errors.Is(err, devicemanager.ErrNotFound) { ... }
 const (
-	ErrNotFound          domainError = "device not found"
-	ErrIPAlreadyExists   domainError = "device ip already exists"
-	ErrMACAlreadyExists  domainError = "network interface mac already exists"
-	ErrRandomizedMAC     domainError = "randomized MAC address: on the device, turn off random (private) hardware addresses for this Wi-Fi network and register its real MAC"
-	ErrNoZone            domainError = "ip is empty and the device has no zone to assign one from"
-	ErrIPOutsideZone     domainError = "ip is outside the device's zone range"
-	ErrZoneFull          domainError = "zone has no free ip"
-	ErrZoneOverlap       domainError = "zone range overlaps another zone"
-	ErrZoneInUse         domainError = "zone is used by a device"
-	ErrZoneNotFound      domainError = "zone not found"
-	ErrInterfaceNotFound domainError = "network interface not found"
-	ErrInvalidZoneRange  domainError = "zone range must be two IPv4 addresses with start <= end"
+	ErrNotFound          model.NotFound = "device not found"
+	ErrIPAlreadyExists   model.Conflict = "device ip already exists"
+	ErrMACAlreadyExists  model.Conflict = "network interface mac already exists"
+	ErrRandomizedMAC     model.Invalid  = "randomized MAC address: on the device, turn off random (private) hardware addresses for this Wi-Fi network and register its real MAC"
+	ErrNoZone            model.Invalid  = "ip is empty and the device has no zone to assign one from"
+	ErrIPOutsideZone     model.Invalid  = "ip is outside the device's zone range"
+	ErrZoneFull          model.Invalid  = "zone has no free ip"
+	ErrZoneOverlap       model.Conflict = "zone range overlaps another zone"
+	ErrZoneInUse         model.Conflict = "zone is used by a device"
+	ErrZoneNotFound      model.NotFound = "zone not found"
+	ErrInterfaceNotFound model.NotFound = "network interface not found"
+	ErrInvalidZoneRange  model.Invalid  = "zone range must be two IPv4 addresses with start <= end"
+	ErrCannotRead        model.Invalid  = "device_manager: cannot read the request"
 )
 
-// ValidationError envuelve un error de validación de campos.
 //
-// Ejemplo: return devicemanager.ValidationError{Err: err}
-type ValidationError struct{ Err error }
 
-func (v ValidationError) Error() string { return v.Err.Error() }
 
 // Tópicos de eventos publicados por el módulo. El tenant_id viaja en el payload del evento, nunca en el tópico.
 //

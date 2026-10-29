@@ -49,7 +49,7 @@ func (m *Module) SaveZone(z Zone) (Zone, error) {
 	z.RangeEnd = input.CanonicalIP(z.RangeEnd)
 	start, end, ok := zoneRange(z)
 	if !ok {
-		return Zone{}, ValidationError{Err: ErrInvalidZoneRange}
+		return Zone{}, &model.FieldError{Field: "range_start", Err: ErrInvalidZoneRange}
 	}
 	action := model.ActionUpdate
 	if creating {
@@ -58,7 +58,7 @@ func (m *Module) SaveZone(z Zone) (Zone, error) {
 	}
 	z.UpdatedAt = time.NowNano()
 	if err := z.Validate(action); err != nil {
-		return Zone{}, ValidationError{Err: err}
+		return Zone{}, err
 	}
 	if !creating {
 		if _, err := m.GetZone(z.TenantId, z.Id); err != nil {

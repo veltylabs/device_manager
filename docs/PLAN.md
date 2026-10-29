@@ -122,3 +122,9 @@ GOPRIVATE=webtyp.com/*,github.com/veltylabs/* GOFLAGS=-mod=mod gotest
 | 4 | `ui/module.go`, `lang.json` | `langc sync .` clean |
 | 5 | `tests/*` | suite green |
 | 6 | `README.md` | text present |
+
+## Executor notes
+
+- Stage 6 completed successfully.
+- The test loopback caller requires importing `webtyp.com/rpc` to resolve some dependencies dynamically.
+- Refactored `ops.go` to safely remove deprecated error checking with `model.KindOf(err)` mapped directly to `rpc.WriteError`.

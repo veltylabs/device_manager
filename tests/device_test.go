@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"webtyp.com/model"
 	"testing"
 	"webtyp.com/network"
 
@@ -55,8 +56,8 @@ func TestCreateDevice_InvalidType(t *testing.T) {
 		Type:     "not-a-real-type",
 		IsActive: true,
 	})
-	if _, ok := err.(devicemanager.ValidationError); !ok {
-		t.Fatalf("expected ValidationError for an invalid type, got %v (%T)", err, err)
+	if _, ok := err.(*model.FieldError); !ok {
+		t.Fatalf("expected FieldError for an invalid type, got %v (%T)", err, err)
 	}
 }
 

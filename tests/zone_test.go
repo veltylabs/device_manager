@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"webtyp.com/model"
 	"testing"
 
 	devicemanager "github.com/veltylabs/device_manager"
@@ -39,9 +40,9 @@ func TestZone_InvalidRange(t *testing.T) {
 		{TenantId: "tenant-A", Name: "ipv6", RangeStart: "::1", RangeEnd: "::2"},
 	} {
 		if _, err := m.SaveZone(z); err == nil {
-			t.Errorf("SaveZone(%s) = nil, want a ValidationError", z.Name)
-		} else if _, ok := err.(devicemanager.ValidationError); !ok {
-			t.Errorf("SaveZone(%s) = %v (%T), want ValidationError", z.Name, err, err)
+				t.Errorf("SaveZone(%s) = nil, want a FieldError", z.Name)
+			} else if _, ok := err.(*model.FieldError); !ok {
+				t.Errorf("SaveZone(%s) = %v (%T), want FieldError", z.Name, err, err)
 		}
 	}
 }
