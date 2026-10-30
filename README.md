@@ -34,6 +34,7 @@ dm, err := devicemanager.New(db, devicemanager.Deps{
     Publisher: eventPublisher, // events.Publisher, opcional
 })
 dm.MountOperations(reg)    // router.OperationRegistry
+// El esquema se actualiza automáticamente con migrate.Migrate, que utiliza ddl.Sync (https://github.com/webtyp/ddl/blob/main/docs/diagrams/SYNC_FLOW.md)
 view := dm.NewView(caller) // router.Caller -> view.Presenter (también NewZoneView, NewNetworkInterfaceView)
 
 // Frontera con webtyp.com/network: los hosts que el router debe aplicar, y la

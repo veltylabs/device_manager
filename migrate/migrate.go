@@ -18,13 +18,11 @@ import (
 //
 // Ejemplo: err := migrate.Migrate(conn, compiler)
 func Migrate(conn ddl.Execer, ddlCompiler ddl.Compiler) error {
-	d := ddl.New(conn, ddlCompiler)
-	// Orden de dependencias FK: network_interface.device_id referencia a device.id.
-	if err := d.CreateTable(&devicemanager.Zone{}); err != nil {
-		return err
-	}
-	if err := d.CreateTable(&devicemanager.Device{}); err != nil {
-		return err
-	}
-	return d.CreateTable(&devicemanager.NetworkInterface{})
+	// Sync y no CreateTable: crea la tabla que falta y además agrega las columnas que un modelo
+	// ganó, así un campo nuevo llega a una base ya instalada. Flujo: https://github.com/webtyp/ddl/blob/main/docs/diagrams/SYNC_FLOW.md
+	return ddl.New(conn, ddlCompiler).Sync(
+		&devicemanager.Zone{},
+		&devicemanager.Device{},
+		&devicemanager.NetworkInterface{},
+	)
 }
