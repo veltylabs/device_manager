@@ -2,7 +2,6 @@
   "languages": ["es", "zh", "hi", "ar", "pt", "fr", "de", "ru"],
   "keys": {
     "Access": ["Acceso", "访问", "पहुँच", "الوصول", "Acesso", "Accès", "Zugang", "Доступ"],
-    "Active": ["Activo", "有效", "सक्रिय", "نشط", "Ativo", "Actif", "Aktiv", "Активен"],
     "Computer": ["Computador", "电脑", "कंप्यूटर", "حاسوب", "Computador", "Ordinateur", "Computer (PC)", "Компьютер"],
     "Device": ["Equipo", "设备", "डिवाइस", "جهاز", "Dispositivo", "Appareil", "Gerät", "Устройство"],
     "Devices": ["Equipos", "设备列表", "डिवाइसें", "الأجهزة", "Dispositivos", "Appareils", "Geräte", "Устройства"],
@@ -14,7 +13,6 @@
     "Local network only": ["Solo red local", "仅限本地网络", "केवल स्थानीय नेटवर्क", "الشبكة المحلية فقط", "Somente rede local", "Réseau local uniquement", "Nur lokales Netzwerk", "Только локальная сеть"],
     "Location": ["Ubicación", "位置", "स्थान", "الموقع", "Localização", "Emplacement", "Standort", "Расположение"],
     "MAC address": ["Dirección MAC", "MAC 地址", "MAC पता", "عنوان MAC", "Endereço MAC", "Adresse MAC", "MAC-Adresse", "MAC-адрес"],
-    "Name": ["Nombre", "名称", "नाम", "الاسم", "Nome", "Nom", "Bezeichnung (Name)", "Название"],
     "Network interfaces": ["Interfaces de red", "网络接口", "नेटवर्क इंटरफ़ेस", "واجهات الشبكة", "Interfaces de rede", "Interfaces réseau", "Netzwerkschnittstellen", "Сетевые интерфейсы"],
     "Other": ["Otro", "其他", "अन्य", "أخرى", "Outro", "Autre", "Sonstiges", "Другое"],
     "Printer": ["Impresora", "打印机", "प्रिंटर", "طابعة", "Impressora", "Imprimante", "Drucker", "Принтер"],
@@ -27,15 +25,7 @@
     "Zone": ["Zona", "区域", "क्षेत्र", "المنطقة", "Zona", "Zone (lieu)", "Zone (Ort)", "Зона"],
     "Zones": ["Zonas", "区域列表", "क्षेत्र सूची", "المناطق", "Zonas", "Zones (lieux)", "Zonen", "Зоны"],
     "Zones group the devices by place (for example, reception or box 1). Create the zones first; each device then picks one.": ["Las zonas agrupan los equipos por lugar (por ejemplo, recepción o box 1). Crea primero las zonas; luego cada equipo elige una.", "区域按地点对设备分组（例如前台或 1 号诊室）。先创建区域，然后每台设备选择一个。", "क्षेत्र डिवाइसों को स्थान के अनुसार समूहित करते हैं (जैसे रिसेप्शन या बॉक्स 1)। पहले क्षेत्र बनाएँ; फिर हर डिवाइस एक चुनता है।", "تجمع المناطق الأجهزة حسب المكان (مثل الاستقبال أو الغرفة 1). أنشئ المناطق أولاً، ثم يختار كل جهاز واحدة منها.", "As zonas agrupam os dispositivos por local (por exemplo, recepção ou consultório 1). Crie as zonas primeiro; depois cada dispositivo escolhe uma.", "Les zones regroupent les appareils par lieu (par exemple, l'accueil ou le box 1). Créez d'abord les zones ; chaque appareil en choisit ensuite une.", "Zonen gruppieren die Geräte nach Ort (zum Beispiel Empfang oder Behandlungsraum 1). Legen Sie zuerst die Zonen an; danach wählt jedes Gerät eine.", "Зоны группируют устройства по месту (например, регистратура или кабинет 1). Сначала создайте зоны; затем каждое устройство выбирает одну."],
-    "active only": ["solo activos", "仅有效", "केवल सक्रिय", "النشطة فقط", "somente ativos", "actifs uniquement", "nur aktive", "только активные"],
     "device id": ["id de equipo", "设备 ID", "डिवाइस आईडी", "معرّف الجهاز", "ID do dispositivo", "ID de l'appareil", "Geräte-ID", "ID устройства"],
-    "id": ["id", "ID", "आईडी", "المعرّف", "ID", "ID (identifiant)", "ID (Kennung)", "идентификатор"],
-    "invalid device type: %s": ["tipo de equipo inválido: %s", "无效的设备类型：%s", "अमान्य डिवाइस प्रकार: %s", "نوع جهاز غير صالح: %s", "tipo de dispositivo inválido: %s", "type d'appareil invalide : %s", "ungültiger Gerätetyp: %s", "недопустимый тип устройства: %s"],
-    "is required": ["es requerido", "为必填项", "आवश्यक है", "مطلوب", "é obrigatório", "est obligatoire", "ist erforderlich", "обязательно"],
-    "limit": ["límite", "上限", "सीमा", "الحد", "limite", "limite (max.)", "Limit (max.)", "лимит"],
-    "offset": ["desplazamiento", "偏移量", "ऑफ़सेट", "الإزاحة", "deslocamento", "décalage", "Versatz", "смещение"],
-    "tenant id": ["id de tenant", "租户 ID", "टेनेंट आईडी", "معرّف المستأجر", "ID do locatário", "ID du locataire", "Mandanten-ID", "ID арендатора"],
-    "type": ["tipo", "类型", "प्रकार", "النوع", "tipo", "type (genre)", "Typ (Art)", "тип"],
-    "updated at": ["actualizado el", "更新时间", "अद्यतन समय", "تاريخ التحديث", "atualizado em", "mis à jour le", "aktualisiert am", "обновлено"]
+    "invalid device type: %s": ["tipo de equipo inválido: %s", "无效的设备类型：%s", "अमान्य डिवाइस प्रकार: %s", "نوع جهاز غير صالح: %s", "tipo de dispositivo inválido: %s", "type d'appareil invalide : %s", "ungültiger Gerätetyp: %s", "недопустимый тип устройства: %s"]
   }
 }
