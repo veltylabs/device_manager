@@ -32,7 +32,7 @@ require (
 	golang.org/x/mod v0.36.0 // indirect
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/tools v0.45.0 // indirect
 	howett.net/plist v1.0.0 // indirect
@@ -61,7 +61,7 @@ require (
 	webtyp.com/mcp v0.3.20 // indirect
 	webtyp.com/msgtype v0.1.0 // indirect
 	webtyp.com/pwa v0.2.13 // indirect
-	webtyp.com/rbac v0.0.28 // indirect
+	webtyp.com/rbac v0.0.29 // indirect
 	webtyp.com/server v0.2.105 // indirect
 	webtyp.com/unixid v0.3.1 // indirect
 	webtyp.com/user v0.3.14 // indirect
