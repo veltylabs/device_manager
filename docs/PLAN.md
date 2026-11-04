@@ -2,8 +2,10 @@
 PLAN: "refactor: screens get appkit.BrowserDeps (appkit v0.2.7)"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 6576107022009080355
+PR: https://github.com/veltylabs/device_manager/pull/14
+REVIEWED_COMMIT: 08c863b9a23ccbb0db139aa8025d0bdec0351e9d
 ---
 
 > Read AGENTS.md at the repo root before any change.
