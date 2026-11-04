@@ -2,8 +2,10 @@
 PLAN: "refactor: screens get appkit.BrowserDeps (appkit v0.2.7)"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 6576107022009080355
+PR: https://github.com/veltylabs/device_manager/pull/14
+REVIEWED_COMMIT: 08c863b9a23ccbb0db139aa8025d0bdec0351e9d
 ---
 
 > Read AGENTS.md at the repo root before any change.
@@ -70,3 +72,5 @@ Every test, seed and `web/` demo that builds what changed passes a zone: `zone, 
 
 Commit after every stage. Never edit a generated `*_orm.go`. Never run `git reset`, `git restore`, `git checkout --
 <file>` or `git stash` on your own work. Stuck 30 minutes: open the PR anyway listing what fails.
+## Executor notes
+No files required timezone updates, and no tests/seeds needed timezone fixing as no files required update. Tests pass without any timezone updates.
