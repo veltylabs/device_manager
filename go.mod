@@ -18,7 +18,7 @@ require (
 	webtyp.com/rpc v0.2.15
 	webtyp.com/storage v0.1.18
 	webtyp.com/svg v0.3.33
-	webtyp.com/time v0.6.3
+	webtyp.com/time v0.6.4
 	webtyp.com/view v0.6.53
 )
 
