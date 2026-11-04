@@ -2,6 +2,8 @@
 PLAN: "refactor: screens get appkit.BrowserDeps (appkit v0.2.7)"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 6576107022009080355
 ---
 
 > Read AGENTS.md at the repo root before any change.
