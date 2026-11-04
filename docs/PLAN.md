@@ -70,3 +70,5 @@ Every test, seed and `web/` demo that builds what changed passes a zone: `zone, 
 
 Commit after every stage. Never edit a generated `*_orm.go`. Never run `git reset`, `git restore`, `git checkout --
 <file>` or `git stash` on your own work. Stuck 30 minutes: open the PR anyway listing what fails.
+## Executor notes
+No files required timezone updates, and no tests/seeds needed timezone fixing as no files required update. Tests pass without any timezone updates.

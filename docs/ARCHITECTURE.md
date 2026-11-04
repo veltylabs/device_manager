@@ -83,3 +83,5 @@ dm, _ := devicemanager.New(db, devicemanager.Deps{IDs: ids, Publisher: pub, Tena
 dm.MountOperations(reg)
 hosts := devicemanager.NetworkHosts{Devices: dm, TenantID: tenant} // network.HostSource + HostImporter
 ```
+
+Las fechas que ve una persona salen de la zona de la instalación (`Deps.Zone` / `BrowserDeps.Zone`); un día guardado como clave usa las funciones UTC.
