@@ -4,22 +4,13 @@ package module
 
 import (
 	"webtyp.com/appkit"
-	"webtyp.com/ddl"
 	"webtyp.com/model"
 
 	devicemanager "github.com/veltylabs/device_manager"
-	"github.com/veltylabs/device_manager/migrate"
 )
 
-// server es lo que el módulo aporta al servidor: sus tablas (más el paso legado
-// device.ip) y cómo se construye.
+// server es lo que el módulo aporta al servidor: cómo se construye.
 var server = appkit.ModuleServer{
-	Migrate: func(conn ddl.Execer, c ddl.Compiler) error {
-		if err := migrate.Migrate(conn, c); err != nil {
-			return err
-		}
-		return migrate.LegacyDeviceIP(conn, c)
-	},
 	Build: build,
 }
 
