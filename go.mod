@@ -3,7 +3,7 @@ module github.com/veltylabs/device_manager
 go 1.26.8
 
 require (
-	webtyp.com/appkit v0.2.9
+	webtyp.com/appkit v0.2.10
 	webtyp.com/ddl v0.0.39
 	webtyp.com/events v0.1.7
 	webtyp.com/fmt v1.0.0
@@ -65,5 +65,3 @@ require (
 	webtyp.com/webauthn v0.1.16 // indirect
 	webtyp.com/widget v0.6.46 // indirect
 )
-
-replace webtyp.com/appkit => ../../../webtyp/appkit
