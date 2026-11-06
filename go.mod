@@ -19,7 +19,7 @@ require (
 	webtyp.com/storage v0.1.18
 	webtyp.com/svg v0.3.33
 	webtyp.com/time v0.6.4
-	webtyp.com/view v0.6.63
+	webtyp.com/view v0.6.64
 )
 
 require (
@@ -36,7 +36,7 @@ require (
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/tools v0.48.0 // indirect
 	howett.net/plist v1.0.0 // indirect
-	webtyp.com/auth v0.0.109 // indirect
+	webtyp.com/auth v0.0.111 // indirect
 	webtyp.com/await v0.1.2 // indirect
 	webtyp.com/base64 v0.0.6 // indirect
 	webtyp.com/calendar v0.1.0 // indirect
