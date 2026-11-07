@@ -53,7 +53,7 @@ require (
 	webtyp.com/filepath v0.1.0 // indirect
 	webtyp.com/font v0.0.5 // indirect
 	webtyp.com/html v0.0.30 // indirect
-	webtyp.com/json v0.5.37 // indirect
+	webtyp.com/json v0.5.40 // indirect
 	webtyp.com/keyring v0.2.9 // indirect
 	webtyp.com/layout v0.3.108 // indirect
 	webtyp.com/mcp v0.3.20 // indirect
