@@ -17,7 +17,7 @@ func TestZone_SaveListDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveZone: %v", err)
 	}
-	zones, err := m.ListZones("tenant-A")
+	zones, err := m.ListZones("tenant-A", "", "", 0)
 	if err != nil || len(zones) != 1 || zones[0].Id != z.Id {
 		t.Fatalf("ListZones = %+v (err %v), want the saved zone", zones, err)
 	}

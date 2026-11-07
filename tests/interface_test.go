@@ -119,7 +119,7 @@ func TestInterface_DeleteDeviceDeletesInterfaces(t *testing.T) {
 	if err := m.DeleteDevice("tenant-A", d.Id); err != nil {
 		t.Fatalf("DeleteDevice: %v", err)
 	}
-	left, err := m.ListNetworkInterfaces("tenant-A", d.Id)
+	left, err := m.ListNetworkInterfaces("tenant-A", d.Id, "", "", 0)
 	if err != nil || len(left) != 0 {
 		t.Fatalf("interfaces after deleting the device = %+v (err %v), want none", left, err)
 	}

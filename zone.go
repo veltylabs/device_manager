@@ -26,9 +26,17 @@ func (m *Module) GetZone(tenantId, id string) (Zone, error) {
 // ListZones lista todas las zonas configuradas para un tenant.
 //
 // Ejemplo: zonas, err := dm.ListZones(tenantID)
-func (m *Module) ListZones(tenantId string) ([]Zone, error) {
+func (m *Module) ListZones(tenantId string, search, after string, limit int) ([]Zone, error) {
 	var z Zone
-	rows, err := ReadAllZone(m.db.Query(&z).Where(Zone_.TenantId).Eq(tenantId))
+	qb := m.db.Query(&z).Where(Zone_.TenantId).Eq(tenantId)
+	if search != "" {
+		qb = qb.Where(Zone_.Name).Like("%" + search + "%")
+	}
+	if after != "" {
+		qb = qb.Where(Zone_.Id).Gt(after)
+	}
+	qb = qb.OrderBy(Zone_.Id).Asc().Limit(limit)
+	rows, err := ReadAllZone(qb)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +73,7 @@ func (m *Module) SaveZone(z Zone) (Zone, error) {
 			return Zone{}, err
 		}
 	}
-	others, err := m.ListZones(z.TenantId)
+	others, err := m.ListZones(z.TenantId, "", "", 0)
 	if err != nil {
 		return Zone{}, err
 	}

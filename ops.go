@@ -56,7 +56,7 @@ func (m *Module) saveDevice(d *Device) error {
 }
 
 func (m *Module) MountOperations(reg router.OperationRegistry) {
-	reg.Operation(OpListDevices, m.opListDevices).Requires(model.ResourceOf(&DeviceModel), model.Read).Accepts(&ListDevicesArgs{})
+	reg.Operation(OpListDevices, m.opListDevices).Requires(model.ResourceOf(&DeviceModel), model.Read).Accepts(&view.ListArgs{})
 	reg.Operation(OpGetDevice, m.opGetDevice).Requires(model.ResourceOf(&DeviceModel), model.Read).Accepts(&GetDeviceArgs{})
 	reg.Operation(OpCreateDevice, m.opCreateDevice).Requires(model.ResourceOf(&DeviceModel), model.Create).Accepts(&Device{})
 	reg.Operation(OpUpdateDevice, m.opUpdateDevice).Requires(model.ResourceOf(&DeviceModel), model.Update).Accepts(&Device{})
@@ -70,7 +70,7 @@ func (m *Module) MountOperations(reg router.OperationRegistry) {
 		}
 		return nil
 	}).Requires(model.ResourceOf(&DeviceModel), model.Delete)
-	reg.Operation(OpListZones, m.opListZones).Requires(model.ResourceOf(&ZoneModel), model.Read).Accepts(&ListZonesArgs{})
+	reg.Operation(OpListZones, m.opListZones).Requires(model.ResourceOf(&ZoneModel), model.Read).Accepts(&view.ListArgs{})
 	view.MountSave(reg, OpSaveZone, func(z *Zone) error {
 		z.TenantId = m.tenantID
 		out, err := m.SaveZone(*z)
@@ -85,7 +85,7 @@ func (m *Module) MountOperations(reg router.OperationRegistry) {
 		}
 		return nil
 	}).Requires(model.ResourceOf(&ZoneModel), model.Delete)
-	reg.Operation(OpListNetworkInterfaces, m.opListNetworkInterfaces).Requires(model.ResourceOf(&NetworkInterfaceModel), model.Read).Accepts(&ListNetworkInterfacesArgs{})
+	reg.Operation(OpListNetworkInterfaces, m.opListNetworkInterfaces).Requires(model.ResourceOf(&NetworkInterfaceModel), model.Read).Accepts(&view.ListArgs{})
 	view.MountSave(reg, OpSaveNetworkInterface, func(ni *NetworkInterface) error {
 		ni.TenantId = m.tenantID
 		out, err := m.SaveNetworkInterface(*ni)
@@ -105,14 +105,12 @@ func (m *Module) MountOperations(reg router.OperationRegistry) {
 var _ router.OperationModule = (*Module)(nil)
 
 func (m *Module) opListDevices(ctx router.Context) {
-	var args ListDevicesArgs
+	var args view.ListArgs
 	if err := ctx.Decode(&args); err != nil {
 		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
-	tenantID := m.tenantID
-	filter := DeviceFilter{Type: args.Type, ActiveOnly: args.ActiveOnly, Limit: args.Limit, Offset: args.Offset}
-	devices, err := m.ListDevices(tenantID, filter)
+	devices, err := m.ListDevices(m.tenantID, DeviceFilter{Search: args.Search, After: args.After, Limit: int64(int(view.Cap(args.Limit)))})
 	if err != nil {
 		rpc.WriteError(ctx, err)
 		return
@@ -190,12 +188,12 @@ func (m *Module) opDeactivateDevice(ctx router.Context) {
 }
 
 func (m *Module) opListZones(ctx router.Context) {
-	var args ListZonesArgs
+	var args view.ListArgs
 	if err := ctx.Decode(&args); err != nil {
 		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
-	zones, err := m.ListZones(m.tenantID)
+	zones, err := m.ListZones(m.tenantID, args.Search, args.After, int(view.Cap(args.Limit)))
 	if err != nil {
 		rpc.WriteError(ctx, err)
 		return
@@ -210,12 +208,12 @@ func (m *Module) opListZones(ctx router.Context) {
 }
 
 func (m *Module) opListNetworkInterfaces(ctx router.Context) {
-	var args ListNetworkInterfacesArgs
+	var args view.ListArgs
 	if err := ctx.Decode(&args); err != nil {
 		rpc.WriteError(ctx, ErrCannotRead)
 		return
 	}
-	ifaces, err := m.ListNetworkInterfaces(m.tenantID, args.DeviceId)
+	ifaces, err := m.ListNetworkInterfaces(m.tenantID, "", args.Search, args.After, int(view.Cap(args.Limit)))
 	if err != nil {
 		rpc.WriteError(ctx, err)
 		return

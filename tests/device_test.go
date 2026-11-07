@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"webtyp.com/view"
 	"webtyp.com/model"
 	"testing"
 	"webtyp.com/network"
@@ -136,7 +137,7 @@ func TestListDevices_FilterByTypeAndActive(t *testing.T) {
 		t.Fatalf("DeactivateDevice: %v", err)
 	}
 
-	servers, err := m.ListDevices("tenant-A", devicemanager.DeviceFilter{Type: devicemanager.DeviceTypeServer})
+	servers, err := m.ListDevices("tenant-A", devicemanager.DeviceFilter{Type: devicemanager.DeviceTypeServer, Limit: int64(view.Cap(0))})
 	if err != nil {
 		t.Fatalf("ListDevices: %v", err)
 	}
@@ -144,7 +145,7 @@ func TestListDevices_FilterByTypeAndActive(t *testing.T) {
 		t.Fatalf("expected 1 server, got %+v", servers)
 	}
 
-	active, err := m.ListDevices("tenant-A", devicemanager.DeviceFilter{ActiveOnly: true})
+	active, err := m.ListDevices("tenant-A", devicemanager.DeviceFilter{ActiveOnly: true, Limit: int64(view.Cap(0))})
 	if err != nil {
 		t.Fatalf("ListDevices: %v", err)
 	}
