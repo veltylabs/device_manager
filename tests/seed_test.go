@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"webtyp.com/view"
 	"testing"
 
 	devicemanager "github.com/veltylabs/device_manager"
@@ -27,7 +28,7 @@ func TestSeedLoad(t *testing.T) {
 		t.Errorf("got %d devices, want 3", len(data.Devices))
 	}
 
-	devices, err := dm.ListDevices("tenant-demo", devicemanager.DeviceFilter{})
+	devices, err := dm.ListDevices("tenant-demo", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
 	if err != nil {
 		t.Fatalf("ListDevices: %v", err)
 	}

@@ -57,6 +57,8 @@ func New(db *orm.DB, deps Deps) (*Module, error) {
 //
 // Ejemplo: f := devicemanager.DeviceFilter{ActiveOnly: true}
 type DeviceFilter struct {
+	Search     string
+	After      string
 	Type       string
 	ActiveOnly bool
 	Limit      int64
@@ -104,6 +106,12 @@ func (m *Module) FindByIP(tenantId, ip string) (Device, error) {
 func (m *Module) ListDevices(tenantId string, filter DeviceFilter) ([]Device, error) {
 	var d Device
 	qb := m.db.Query(&d).Where(Device_.TenantId).Eq(tenantId)
+	if filter.Search != "" {
+		qb = qb.Where(Device_.Name).Like("%" + filter.Search + "%")
+	}
+	if filter.After != "" {
+		qb = qb.Where(Device_.Id).Gt(filter.After)
+	}
 	if filter.Type != "" {
 		qb = qb.Where(Device_.Type).Eq(filter.Type)
 	}
@@ -116,6 +124,7 @@ func (m *Module) ListDevices(tenantId string, filter DeviceFilter) ([]Device, er
 	if filter.Offset > 0 {
 		qb = qb.Offset(int(filter.Offset))
 	}
+	qb = qb.OrderBy(Device_.Id).Asc()
 	results, err := ReadAllDevice(qb)
 	if err != nil {
 		return nil, err
@@ -221,7 +230,7 @@ func (m *Module) DeleteDevice(tenantId, id string) error {
 		return err
 	}
 	// Primero sus interfaces: network_interface.device_id referencia a device.id.
-	ifaces, err := m.ListNetworkInterfaces(tenantId, id)
+	ifaces, err := m.ListNetworkInterfaces(tenantId, id, "", "", 0)
 	if err != nil {
 		return err
 	}

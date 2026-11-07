@@ -14,7 +14,7 @@ const titleDevices = "Equipos"
 // Ejemplo: p := devicemanager.NewView(caller, view.WithDescription("Ayuda..."))
 func NewView(caller router.Caller, opts ...view.Option) view.Presenter {
 	b := view.NewCallerLister(view.NewRecords().Caller(caller),
-		view.Ops{Module: ModelName, List: OpListDevices, Save: OpUpsertDevice, Delete: OpDeleteDevice},
+		view.Ops{Module: ModelName, List: OpListDevices, Save: OpUpsertDevice, Delete: OpDeleteDevice, Page: view.Page{First: view.All}},
 		func() model.ModelSlice { return &DeviceList{} })
 	allOpts := append([]view.Option{view.WithTitle(titleDevices)}, opts...)
 	return view.New(b, &Device{}, allOpts...)
@@ -30,7 +30,7 @@ const (
 // Ejemplo: p := devicemanager.NewZoneView(caller, view.WithDescription("Ayuda..."))
 func NewZoneView(caller router.Caller, opts ...view.Option) view.Presenter {
 	b := view.NewCallerLister(view.NewRecords().Caller(caller),
-		view.Ops{Module: ModelName, List: OpListZones, Save: OpSaveZone, Delete: OpDeleteZone},
+		view.Ops{Module: ModelName, List: OpListZones, Save: OpSaveZone, Delete: OpDeleteZone, Page: view.Page{First: view.All}},
 		func() model.ModelSlice { return &ZoneList{} })
 	allOpts := append([]view.Option{view.WithTitle(titleZones)}, opts...)
 	return view.New(b, &Zone{}, allOpts...)
@@ -41,7 +41,7 @@ func NewZoneView(caller router.Caller, opts ...view.Option) view.Presenter {
 // Ejemplo: p := devicemanager.NewNetworkInterfaceView(caller, view.WithDescription("Ayuda..."))
 func NewNetworkInterfaceView(caller router.Caller, opts ...view.Option) view.Presenter {
 	b := view.NewCallerLister(view.NewRecords().Caller(caller),
-		view.Ops{Module: ModelName, List: OpListNetworkInterfaces, Save: OpSaveNetworkInterface, Delete: OpDeleteNetworkInterface},
+		view.Ops{Module: ModelName, List: OpListNetworkInterfaces, Save: OpSaveNetworkInterface, Delete: OpDeleteNetworkInterface, Page: view.Page{First: view.All}},
 		func() model.ModelSlice { return &NetworkInterfaceList{} })
 	allOpts := append([]view.Option{view.WithTitle(titleNetworkInterfaces)}, opts...)
 	return view.New(b, &NetworkInterface{}, allOpts...)

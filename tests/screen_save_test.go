@@ -26,7 +26,7 @@ func TestScreenSave(t *testing.T) {
 		t.Fatal(saveErr)
 	}
 	if d.Id == "" {
-		list, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{})
+		list, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
 		d.Id = list[0].Id
 	}
 
@@ -47,7 +47,7 @@ func TestScreenSave(t *testing.T) {
 		t.Fatal(saveErr)
 	}
 	if z.Id == "" {
-		list, _ := dm.ListZones("tenant-A")
+		list, _ := dm.ListZones("tenant-A", "", "", 0)
 		z.Id = list[len(list)-1].Id
 	}
 
@@ -68,7 +68,7 @@ func TestScreenSave(t *testing.T) {
 	if saveErr != nil {
 		t.Fatal(saveErr)
 	}
-	list_dev2, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{})
+	list_dev2, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
 	devForIface.Id = list_dev2[len(list_dev2)-1].Id
 
 	ni.DeviceId = devForIface.Id
@@ -77,19 +77,19 @@ func TestScreenSave(t *testing.T) {
 		t.Fatal(saveErr)
 	}
 	if ni.Id == "" {
-		list, _ := dm.ListNetworkInterfaces("tenant-A", ni.DeviceId)
+		list, _ := dm.ListNetworkInterfaces("tenant-A", ni.DeviceId, "", "", 0)
 		ni.Id = list[0].Id
 	}
 
 	// IP Conflict test
 	z2 := &devicemanager.Zone{TenantId: "tenant-A", Name: "test-zone-2", RangeStart: "10.10.0.1", RangeEnd: "10.10.0.1"}
 	zsaver.Save([]model.Model{z2}, func(err error) {})
-	list_z2, _ := dm.ListZones("tenant-A")
+	list_z2, _ := dm.ListZones("tenant-A", "", "", 0)
 	z2.Id = list_z2[len(list_z2)-1].Id
 
 	devForConflict := &devicemanager.Device{TenantId: "tenant-A", Name: "dev-conflict", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true, ZoneId: z2.Id}
 	saver.Save([]model.Model{devForConflict}, func(err error) {})
-	list_devConf, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{})
+	list_devConf, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
 	devForConflict.Id = list_devConf[len(list_devConf)-1].Id
 
 	ni2 := &devicemanager.NetworkInterface{TenantId: "tenant-A", DeviceId: devForConflict.Id, Label: "eth0"}
@@ -97,7 +97,7 @@ func TestScreenSave(t *testing.T) {
 
 	devForConflict2 := &devicemanager.Device{TenantId: "tenant-A", Name: "dev-conflict2", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true, ZoneId: z2.Id}
 	saver.Save([]model.Model{devForConflict2}, func(err error) {})
-	list_devConf2, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{})
+	list_devConf2, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
 	devForConflict2.Id = list_devConf2[len(list_devConf2)-1].Id
 
 	ni3 := &devicemanager.NetworkInterface{TenantId: "tenant-A", DeviceId: devForConflict2.Id, Label: "eth1"}
@@ -140,7 +140,7 @@ func TestScreen_SaveIgnoresTenantFromRequest(t *testing.T) {
 		t.Fatal(saveErr)
 	}
 
-	listA, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{})
+	listA, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
 	if len(listA) != 1 {
 		t.Fatalf("expected 1 device in tenant-A, got %d", len(listA))
 	}
@@ -148,7 +148,7 @@ func TestScreen_SaveIgnoresTenantFromRequest(t *testing.T) {
 		t.Fatalf("expected device to have TenantId 'tenant-A', got %q", listA[0].TenantId)
 	}
 
-	listOther, _ := dm.ListDevices("other-tenant", devicemanager.DeviceFilter{})
+	listOther, _ := dm.ListDevices("other-tenant", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
 	if len(listOther) != 0 {
 		t.Fatalf("expected 0 devices in other-tenant, got %d", len(listOther))
 	}
@@ -163,7 +163,7 @@ func TestScreen_SaveIgnoresTenantFromRequest(t *testing.T) {
 		t.Fatal(saveErr)
 	}
 
-	listZA, _ := dm.ListZones("tenant-A")
+	listZA, _ := dm.ListZones("tenant-A", "", "", 0)
 	if len(listZA) != 1 {
 		t.Fatalf("expected 1 zone in tenant-A, got %d", len(listZA))
 	}
@@ -171,7 +171,7 @@ func TestScreen_SaveIgnoresTenantFromRequest(t *testing.T) {
 		t.Fatalf("expected zone to have TenantId 'tenant-A', got %q", listZA[0].TenantId)
 	}
 
-	listZOther, _ := dm.ListZones("other-tenant")
+	listZOther, _ := dm.ListZones("other-tenant", "", "", 0)
 	if len(listZOther) != 0 {
 		t.Fatalf("expected 0 zones in other-tenant, got %d", len(listZOther))
 	}

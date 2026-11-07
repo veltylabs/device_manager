@@ -87,7 +87,7 @@ func TestIPLocator_CanonicalSpelling(t *testing.T) {
 	if err != nil {
 		t.Fatalf("createWithIP: %v", err)
 	}
-	ifaces, err := dm.ListNetworkInterfaces("tenant-1", d.Id)
+	ifaces, err := dm.ListNetworkInterfaces("tenant-1", d.Id, "", "", 0)
 	if err != nil || len(ifaces) != 1 || ifaces[0].Ip != "127.0.0.1" {
 		t.Errorf("stored interface = %+v (err %v), want one with Ip %q", ifaces, err, "127.0.0.1")
 	}

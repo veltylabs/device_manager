@@ -85,3 +85,6 @@ hosts := devicemanager.NetworkHosts{Devices: dm, TenantID: tenant} // network.Ho
 ```
 
 Las fechas que ve una persona salen de la zona de la instalación (`Deps.Zone` / `BrowserDeps.Zone`); un día guardado como clave usa las funciones UTC.
+
+Las pantallas correspondientes a listas cargan sus registros tal como declaran en su propiedad `view.Page` y
+resuelven las búsquedas en el servidor mediante parámetros como `search` y `after`.

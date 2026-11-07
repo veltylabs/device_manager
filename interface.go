@@ -27,12 +27,19 @@ func (m *Module) GetNetworkInterface(tenantId, id string) (NetworkInterface, err
 // acota los resultados a las interfaces de dicho equipo.
 //
 // Ejemplo: ifaces, err := dm.ListNetworkInterfaces(tenantID, deviceID)
-func (m *Module) ListNetworkInterfaces(tenantId, deviceId string) ([]NetworkInterface, error) {
+func (m *Module) ListNetworkInterfaces(tenantId, deviceId, search, after string, limit int) ([]NetworkInterface, error) {
 	var ni NetworkInterface
 	qb := m.db.Query(&ni).Where(NetworkInterface_.TenantId).Eq(tenantId)
 	if deviceId != "" {
 		qb = qb.Where(NetworkInterface_.DeviceId).Eq(deviceId)
 	}
+	if search != "" {
+		qb = qb.Where(NetworkInterface_.Label).Like("%" + search + "%")
+	}
+	if after != "" {
+		qb = qb.Where(NetworkInterface_.Id).Gt(after)
+	}
+	qb = qb.OrderBy(NetworkInterface_.Id).Asc().Limit(limit)
 	rows, err := ReadAllNetworkInterface(qb)
 	if err != nil {
 		return nil, err
@@ -78,7 +85,7 @@ func (m *Module) SaveNetworkInterface(ni NetworkInterface) (NetworkInterface, er
 		}
 	}
 
-	all, err := m.ListNetworkInterfaces(ni.TenantId, "")
+	all, err := m.ListNetworkInterfaces(ni.TenantId, "", "", "", 0)
 	if err != nil {
 		return NetworkInterface{}, err
 	}

@@ -132,3 +132,60 @@ func TestView_List(t *testing.T) {
 		t.Error("expected Presenter to implement view.Deleter")
 	}
 }
+
+func TestMountOperations_ListAcceptsListArgs(t *testing.T) {
+	m := setup(t)
+	reg := &mock.Router{}
+	m.MountOperations(reg)
+	reg.Configure(mock.Config{
+		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
+		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
+	})
+
+	ctx := &mock.Context{
+		InBody: []byte(`{"limit": 1}`),
+	}
+	ctx.SetUserID("test-user")
+	reg.Invoke("OP", "/"+devicemanager.OpListDevices, ctx)
+	if ctx.Status != 0 && ctx.Status != 200 {
+		t.Fatalf("expected success status for list args, got %d, body=%s", ctx.Status, ctx.ResponseBody())
+	}
+}
+
+func TestMountOperations_ListZonesAcceptsListArgs(t *testing.T) {
+	m := setup(t)
+	reg := &mock.Router{}
+	m.MountOperations(reg)
+	reg.Configure(mock.Config{
+		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
+		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
+	})
+
+	ctx := &mock.Context{
+		InBody: []byte(`{"limit": 1}`),
+	}
+	ctx.SetUserID("test-user")
+	reg.Invoke("OP", "/"+devicemanager.OpListZones, ctx)
+	if ctx.Status != 0 && ctx.Status != 200 {
+		t.Fatalf("expected success status for list args, got %d, body=%s", ctx.Status, ctx.ResponseBody())
+	}
+}
+
+func TestMountOperations_ListNetworkInterfacesAcceptsListArgs(t *testing.T) {
+	m := setup(t)
+	reg := &mock.Router{}
+	m.MountOperations(reg)
+	reg.Configure(mock.Config{
+		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
+		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
+	})
+
+	ctx := &mock.Context{
+		InBody: []byte(`{"limit": 1}`),
+	}
+	ctx.SetUserID("test-user")
+	reg.Invoke("OP", "/"+devicemanager.OpListNetworkInterfaces, ctx)
+	if ctx.Status != 0 && ctx.Status != 200 {
+		t.Fatalf("expected success status for list args, got %d, body=%s", ctx.Status, ctx.ResponseBody())
+	}
+}

@@ -40,7 +40,7 @@ func (n NetworkHosts) Hosts() ([]network.Host, error) {
 	if err != nil {
 		return nil, err
 	}
-	ifaces, err := n.Devices.ListNetworkInterfaces(n.TenantID, "")
+	ifaces, err := n.Devices.ListNetworkInterfaces(n.TenantID, "", "", "", 0)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (n NetworkHosts) Hosts() ([]network.Host, error) {
 // Ejemplo: res, err := nh.ImportHosts(discovered)
 func (n NetworkHosts) ImportHosts(found []network.Discovered) (network.ImportResult, error) {
 	var res network.ImportResult
-	zones, err := n.Devices.ListZones(n.TenantID)
+	zones, err := n.Devices.ListZones(n.TenantID, "", "", 0)
 	if err != nil {
 		return res, err
 	}
