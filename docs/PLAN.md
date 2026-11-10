@@ -2,8 +2,10 @@
 PLAN: "refactor!: device_manager on the crud-by-declaration framework — Allow and Rules in definition.go, persistence by crud, only domain rules in rule files"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 12281581070087378870
+PR: https://github.com/veltylabs/device_manager/pull/16
+REVIEWED_COMMIT: 21e2c95d1a154f47d17ca1c2e66349b24c3f925f
 ---
 
 > Read AGENTS.md at the repo root before any change.
