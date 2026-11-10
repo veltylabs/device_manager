@@ -4,8 +4,8 @@ import (
 	"webtyp.com/crud"
 	"webtyp.com/input"
 	"webtyp.com/model"
-	"webtyp.com/time"
 	"webtyp.com/storage"
+	"webtyp.com/time"
 )
 
 // Update es la regla de negocio de actualizar network_interface: old es la fila guardada y el receptor trae solo los campos enviados (fields).
@@ -39,7 +39,6 @@ func (next *NetworkInterface) Update(a crud.CurrentUser, tx crud.Tx, old *Networ
 		var dupCount int
 		qDup := crud.Query{Conditions: []storage.Condition{
 			storage.Eq(NetworkInterface_.Mac, next.Mac),
-			storage.Eq(NetworkInterface_.TenantId, next.TenantId),
 			storage.Neq(NetworkInterface_.Id, next.Id),
 		}, Limit: 1}
 		err := tx.ReadAll(func() model.Model { return &NetworkInterface{} }, qDup, func(row model.Model) {
@@ -54,7 +53,7 @@ func (next *NetworkInterface) Update(a crud.CurrentUser, tx crud.Tx, old *Networ
 	}
 
 	var all []NetworkInterface
-	qAll := crud.Query{Conditions: []storage.Condition{storage.Eq(NetworkInterface_.TenantId, next.TenantId)}}
+	qAll := crud.Query{}
 	err := tx.ReadAll(func() model.Model { return &NetworkInterface{} }, qAll, func(row model.Model) {
 		all = append(all, *row.(*NetworkInterface))
 	})

@@ -5,13 +5,14 @@ import (
 	"testing"
 
 	"github.com/veltylabs/device_manager/migrate"
+	"webtyp.com/storage"
 )
 
 type recordingExecer struct{ queries []string }
 
-func (r *recordingExecer) Exec(query string, args ...any) error {
+func (r *recordingExecer) Exec(query string, args ...any) (storage.Result, error) {
 	r.queries = append(r.queries, query)
-	return nil
+	return storage.Affected(0), nil
 }
 
 // El paso legado es una sola sentencia, protegida por la existencia de device.ip:

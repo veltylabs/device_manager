@@ -4,8 +4,8 @@ import (
 	"webtyp.com/crud"
 	"webtyp.com/input"
 	"webtyp.com/model"
-	"webtyp.com/time"
 	"webtyp.com/storage"
+	"webtyp.com/time"
 )
 
 // Create es la regla de negocio de crear network_interface: valida lo que solo tu dominio sabe y responde si se guarda y si se avisa.
@@ -24,7 +24,6 @@ func (p *NetworkInterface) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (cr
 		var dupCount int
 		qDup := crud.Query{Conditions: []storage.Condition{
 			storage.Eq(NetworkInterface_.Mac, p.Mac),
-			storage.Eq(NetworkInterface_.TenantId, p.TenantId),
 			storage.Neq(NetworkInterface_.Id, p.Id),
 		}, Limit: 1}
 		err := tx.ReadAll(func() model.Model { return &NetworkInterface{} }, qDup, func(row model.Model) {
@@ -39,7 +38,7 @@ func (p *NetworkInterface) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (cr
 	}
 
 	var all []NetworkInterface
-	qAll := crud.Query{Conditions: []storage.Condition{storage.Eq(NetworkInterface_.TenantId, p.TenantId)}}
+	qAll := crud.Query{}
 	err := tx.ReadAll(func() model.Model { return &NetworkInterface{} }, qAll, func(row model.Model) {
 		all = append(all, *row.(*NetworkInterface))
 	})

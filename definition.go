@@ -36,8 +36,8 @@ func namePermitted(max int) model.Permitted {
 // Ejemplo: def := devicemanager.DeviceModel
 var DeviceModel = model.Definition{
 	Allow: model.Create | model.Read | model.Update | model.Delete,
-	Rules: model.Rules{Create: model.AddMyBusinessRule, Update: model.AddMyBusinessRule, Delete: model.HaveNoBusinessRule, Read: model.HaveNoBusinessRule},
-	Name: "device",
+	Rules: model.Rules{Create: model.AddMyBusinessRule, Update: model.AddMyBusinessRule, Delete: model.AddMyBusinessRule, Read: model.HaveNoBusinessRule},
+	Name:  "device",
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, ServerOnly: true, OmitEmpty: true},
 		{Name: "tenant_id", Type: model.Text(), NotNull: true, ServerOnly: true},
@@ -48,7 +48,7 @@ var DeviceModel = model.Definition{
 		// La UI llena sus opciones (ui/browser.go).
 		{Name: "zone_id", Type: input.Select(), Label: "Zone", OmitEmpty: true, Options: &ZoneModel},
 		{Name: "access", Type: kinds.DeviceAccess(), Label: "Access", NotNull: true, Item: model.ItemDescription},
-		{Name: "is_active", Type: input.Checkbox(), Label: "Active", NotNull: true},
+		{Name: "is_active", Type: input.Checkbox(), Label: "Active"},
 		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true, ServerOnly: true},
 	},
 }
@@ -59,7 +59,7 @@ var DeviceModel = model.Definition{
 var ZoneModel = model.Definition{
 	Allow: model.Create | model.Read | model.Update | model.Delete,
 	Rules: model.Rules{Create: model.AddMyBusinessRule, Update: model.AddMyBusinessRule, Delete: model.AddMyBusinessRule, Read: model.HaveNoBusinessRule},
-	Name: "zone",
+	Name:  "zone",
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, ServerOnly: true, OmitEmpty: true},
 		{Name: "tenant_id", Type: model.Text(), NotNull: true, ServerOnly: true},
@@ -77,7 +77,7 @@ var ZoneModel = model.Definition{
 var NetworkInterfaceModel = model.Definition{
 	Allow: model.Create | model.Read | model.Update | model.Delete,
 	Rules: model.Rules{Create: model.AddMyBusinessRule, Update: model.AddMyBusinessRule, Delete: model.HaveNoBusinessRule, Read: model.HaveNoBusinessRule},
-	Name: "network_interface",
+	Name:  "network_interface",
 	Fields: model.Fields{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, ServerOnly: true, OmitEmpty: true},
 		{Name: "tenant_id", Type: model.Text(), NotNull: true, ServerOnly: true},
@@ -115,21 +115,20 @@ const ImportedInterfaceLabel = "imported"
 //
 // Ejemplo: if model.KindOf(err) == model.ErrorNotFound { ... }
 const (
-	ErrNotFound          model.NotFound = "device no encontrado"
-	ErrIPAlreadyExists   model.Conflict = "ip duplicada"
-	ErrMACAlreadyExists  model.Conflict = "mac duplicada"
-	ErrRandomizedMAC     model.Invalid  = "dirección MAC aleatoria: apaga las direcciones privadas"
-	ErrNoZone            model.Invalid  = "ip vacía y sin zona"
-	ErrIPOutsideZone     model.Invalid  = "ip fuera de rango de zona"
-	ErrZoneFull          model.Conflict = "zona sin ip libre"
-	ErrZoneOverlap       model.Conflict = "rango solapado"
-	ErrZoneInUse         model.Conflict = "zona en uso"
-	ErrZoneNotFound      model.NotFound = "zona no encontrada"
+	ErrNotFound          model.NotFound = "device not found"
+	ErrIPAlreadyExists   model.Conflict = "device ip already exists"
+	ErrMACAlreadyExists  model.Conflict = "network interface mac already exists"
+	ErrRandomizedMAC     model.Invalid  = "randomized MAC address: on the device, turn off random (private) hardware addresses for this Wi-Fi network and register its real MAC"
+	ErrNoZone            model.Invalid  = "ip is empty and the device has no zone to assign one from"
+	ErrIPOutsideZone     model.Invalid  = "ip is outside the device's zone range"
+	ErrZoneFull          model.Conflict = "zone has no free ip"
+	ErrZoneOverlap       model.Conflict = "zone range overlaps another zone"
+	ErrZoneInUse         model.Conflict = "zone is used by a device"
+	ErrZoneNotFound      model.NotFound = "zone not found"
 	ErrInterfaceNotFound model.NotFound = "network interface not found"
-	ErrInvalidZoneRange  model.Invalid  = "rango inválido"
+	ErrInvalidZoneRange  model.Invalid  = "zone range must be two IPv4 addresses with start <= end"
+	ErrCannotRead        model.Invalid  = "device_manager: cannot read the request"
 )
-
-
 
 var Definition = model.ModuleDefinition{
 	Name: "device_manager",

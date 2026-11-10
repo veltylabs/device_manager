@@ -9,7 +9,7 @@ import (
 // Ejemplo: iface, err := dm.GetNetworkInterface(tenantID, ifaceID)
 func (m *Module) GetNetworkInterface(tenantId, id string) (NetworkInterface, error) {
 	if tenantId != m.tenantID {
-		return NetworkInterface{}, nil
+		return NetworkInterface{}, ErrNotFound
 	}
 	var ni NetworkInterface
 	qb := m.db.Query(&ni).Where(NetworkInterface_.Id).Eq(id).Where(NetworkInterface_.TenantId).Eq(tenantId)
@@ -53,10 +53,6 @@ func (m *Module) ListNetworkInterfaces(tenantId, deviceId, search, after string,
 	}
 	return out, nil
 }
-
-
-
-
 
 // freeIP retorna la dirección más baja de la zona que no esté asignada a ninguna otra interfaz distinta de self.
 func freeIP(z Zone, all []NetworkInterface, self string) (string, bool) {

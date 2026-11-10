@@ -1,37 +1,27 @@
 package tests
 
 import (
-	"webtyp.com/model"
+	"strings"
 	"testing"
-	"webtyp.com/crud"
-	"webtyp.com/router"
+	"webtyp.com/model"
 
 	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/network"
 )
 
-func deviceInZone(t *testing.T, c router.Caller) (devicemanager.Device, devicemanager.Zone) {
+// deviceInZone crea un equipo en una nueva zona AP-06 (.60–.69).
+func deviceInZone(t *testing.T, m *devicemanager.Module) (devicemanager.Device, devicemanager.Zone) {
 	t.Helper()
-	opCreateZone := router.Operation{Module: devicemanager.ModelName, Entity: "zone", Action: model.Create}
-	z := &devicemanager.Zone{Name: "AP-06 piso 2", RangeStart: "172.0.0.60", RangeEnd: "172.0.0.69"}
-	var outZoneRes crud.CreateResult
-	if err := callSync(c, opCreateZone, &crud.CreateArgs{Records: []model.Model{z}}, &outZoneRes); err != nil {
-		t.Fatalf("CreateZone: %v", err)
+	z, err := m.SaveZone(zoneAP06("tenant-A"))
+	if err != nil {
+		t.Fatalf("SaveZone: %v", err)
 	}
-	zId := outZoneRes.IDs[0]
-	z.Id = zId
-
-	opCreateDev := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
-	d := &devicemanager.Device{Name: "PC Ecografia 1", Type: devicemanager.DeviceTypeComputer, ZoneId: zId, Access: network.AccessInternetName, IsActive: true}
-	var outDevRes crud.CreateResult
-	if err := callSync(c, opCreateDev, &crud.CreateArgs{Records: []model.Model{d}}, &outDevRes); err != nil {
+	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "PC Ecografia 1", Type: devicemanager.DeviceTypeComputer,
+		ZoneId: z.Id, Access: network.AccessInternetName, IsActive: true})
+	if err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
-	devId := outDevRes.IDs[0]
-	d.Id = devId
-	d.TenantId = "tenant-A"
-	z.TenantId = "tenant-A"
-	return *d, *z
+	return d, z
 }
 
 func iface(d devicemanager.Device, label, mac, ip string) devicemanager.NetworkInterface {
@@ -40,86 +30,49 @@ func iface(d devicemanager.Device, label, mac, ip string) devicemanager.NetworkI
 
 func TestInterface_AutoAssignsLowestFreeIP(t *testing.T) {
 	m := setup(t)
-	c := crud.LoopbackActingAs(nil, "u1", m)
-	d, _ := deviceInZone(t, c)
-	opCreate := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Create}
+	d, _ := deviceInZone(t, m)
 
-	ni1 := iface(d, "wifi", "", "")
-	var first crud.CreateResult
-	err := callSync(c, opCreate, &crud.CreateArgs{Records: []model.Model{&ni1}}, &first)
-	if err != nil {
-		t.Fatalf("first auto IP: %v", err)
+	first, err := m.SaveNetworkInterface(iface(d, "wifi", "", ""))
+	if err != nil || first.Ip != "172.0.0.60" {
+		t.Fatalf("first auto IP = %q (err %v), want 172.0.0.60", first.Ip, err)
 	}
-
-	ni2 := iface(d, "manual", "", "172.0.0.62")
-	if err := callSync(c, opCreate, &crud.CreateArgs{Records: []model.Model{&ni2}}, nil); err != nil {
+	if _, err := m.SaveNetworkInterface(iface(d, "manual", "", "172.0.0.62")); err != nil {
 		t.Fatalf("explicit .62: %v", err)
 	}
-
-	ni3 := iface(d, "ethernet", "", "")
-	var second crud.CreateResult
-	if err := callSync(c, opCreate, &crud.CreateArgs{Records: []model.Model{&ni3}}, &second); err != nil {
-		t.Fatalf("second auto IP: %v", err)
+	second, err := m.SaveNetworkInterface(iface(d, "ethernet", "", ""))
+	if err != nil || second.Ip != "172.0.0.61" {
+		t.Fatalf("second auto IP = %q (err %v), want 172.0.0.61", second.Ip, err)
 	}
-
-	ni4 := iface(d, "usb", "", "")
-	var third crud.CreateResult
-	if err := callSync(c, opCreate, &crud.CreateArgs{Records: []model.Model{&ni4}}, &third); err != nil {
-		t.Fatalf("third auto IP: %v", err)
+	third, err := m.SaveNetworkInterface(iface(d, "usb", "", ""))
+	if err != nil || third.Ip != "172.0.0.63" {
+		t.Fatalf("third auto IP = %q (err %v), want 172.0.0.63 (skipping the hand-set .62)", third.Ip, err)
 	}
 }
 
 func TestInterface_ZoneFull(t *testing.T) {
 	m := setup(t)
-	c := crud.LoopbackActingAs(nil, "u1", m)
-
-	opCreateZone := router.Operation{Module: devicemanager.ModelName, Entity: "zone", Action: model.Create}
-	z := &devicemanager.Zone{Name: "tiny", RangeStart: "10.0.0.1", RangeEnd: "10.0.0.1"}
-	var outZone crud.CreateResult
-	callSync(c, opCreateZone, &crud.CreateArgs{Records: []model.Model{z}}, &outZone)
-	zId := outZone.IDs[0]
-
-	opCreateDev := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
-	d := &devicemanager.Device{Name: "PC", Type: devicemanager.DeviceTypeComputer, ZoneId: zId, IsActive: true}
-	var outDev crud.CreateResult
-	callSync(c, opCreateDev, &crud.CreateArgs{Records: []model.Model{d}}, &outDev)
-	dId := outDev.IDs[0]
-
-	opCreateNi := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Create}
-	ni1 := iface(devicemanager.Device{Id: dId, TenantId: "tenant-A"}, "lan a", "", "")
-	if err := callSync(c, opCreateNi, &crud.CreateArgs{Records: []model.Model{&ni1}}, nil); err != nil {
+	z, _ := m.SaveZone(devicemanager.Zone{TenantId: "tenant-A", Name: "tiny", RangeStart: "10.0.0.1", RangeEnd: "10.0.0.1"})
+	d, _ := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "PC", Type: devicemanager.DeviceTypeComputer, ZoneId: z.Id, IsActive: true})
+	if _, err := m.SaveNetworkInterface(iface(d, "lan a", "", "")); err != nil {
 		t.Fatalf("first: %v", err)
 	}
-
-	ni2 := iface(devicemanager.Device{Id: dId, TenantId: "tenant-A"}, "lan b", "", "")
-	err := callSync(c, opCreateNi, &crud.CreateArgs{Records: []model.Model{&ni2}}, nil)
-	if !isErr(err, devicemanager.ErrZoneFull) {
+	if _, err := m.SaveNetworkInterface(iface(d, "lan b", "", "")); !isErr(err, devicemanager.ErrZoneFull) {
 		t.Fatalf("second in a full zone: err = %v, want ErrZoneFull", err)
 	}
 }
 
 func TestInterface_NoZoneNeedsExplicitIP(t *testing.T) {
 	m := setup(t)
-	c := crud.LoopbackActingAs(nil, "u1", m)
-
-	opCreateDev := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
-	d := &devicemanager.Device{Name: "Servidor", Type: devicemanager.DeviceTypeServer, IsActive: true}
-	var outDev crud.CreateResult
-	if err := callSync(c, opCreateDev, &crud.CreateArgs{Records: []model.Model{d}}, &outDev); err != nil {
+	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Servidor", Type: devicemanager.DeviceTypeServer, IsActive: true})
+	if err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
-	dId := outDev.IDs[0]
-
-	opCreateNi := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Create}
-	ni1 := iface(devicemanager.Device{Id: dId, TenantId: "tenant-A"}, "lan", "", "")
-	err := callSync(c, opCreateNi, &crud.CreateArgs{Records: []model.Model{&ni1}}, nil)
-	if !isValidation(err, devicemanager.ErrNoZone) {
+	if _, err := m.SaveNetworkInterface(iface(d, "lan", "", "")); !isValidation(err, devicemanager.ErrNoZone) {
 		t.Fatalf("empty IP without zone: err = %v, want ValidationError{ErrNoZone}", err)
 	}
-
+	// Sin una zona cualquier IP es aceptada — ej. los alias loopback del servidor usados para login.
 	for _, ip := range []string{"127.0.0.1", "192.168.50.5"} {
-		ni := iface(devicemanager.Device{Id: dId, TenantId: "tenant-A"}, "lan "+ip, "", ip)
-		if err := callSync(c, opCreateNi, &crud.CreateArgs{Records: []model.Model{&ni}}, nil); err != nil {
+		if _, err := m.SaveNetworkInterface(iface(d, "lan "+ip, "", ip)); err != nil {
 			t.Errorf("IP %s on a device without zone: %v", ip, err)
 		}
 	}
@@ -127,82 +80,57 @@ func TestInterface_NoZoneNeedsExplicitIP(t *testing.T) {
 
 func TestInterface_IPOutsideZone(t *testing.T) {
 	m := setup(t)
-	c := crud.LoopbackActingAs(nil, "u1", m)
-	d, _ := deviceInZone(t, c)
-
-	opCreate := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Create}
-	ni := iface(d, "wifi", "", "172.0.0.47")
-	err := callSync(c, opCreate, &crud.CreateArgs{Records: []model.Model{&ni}}, nil)
-	if !isValidation(err, devicemanager.ErrIPOutsideZone) {
+	d, _ := deviceInZone(t, m)
+	if _, err := m.SaveNetworkInterface(iface(d, "wifi", "", "172.0.0.47")); !isValidation(err, devicemanager.ErrIPOutsideZone) {
 		t.Fatalf(".47 in zone .60–.69: err = %v, want ValidationError{ErrIPOutsideZone}", err)
 	}
 }
 
 func TestInterface_MACRules(t *testing.T) {
 	m := setup(t)
-	c := crud.LoopbackActingAs(nil, "u1", m)
-	d, _ := deviceInZone(t, c)
+	d, _ := deviceInZone(t, m)
 
-	opCreate := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Create}
-	ni1 := iface(d, "wifi", "48-f1-7f-d9-d7-b7", "")
-	var outNi crud.CreateResult
-	if err := callSync(c, opCreate, &crud.CreateArgs{Records: []model.Model{&ni1}}, &outNi); err != nil {
-		t.Fatalf("Create network_interface: %v", err)
+	ni, err := m.SaveNetworkInterface(iface(d, "wifi", "48-f1-7f-d9-d7-b7", ""))
+	if err != nil {
+		t.Fatalf("SaveNetworkInterface: %v", err)
 	}
-	idNi := outNi.IDs[0]
-
-	ni2 := iface(d, "wifi2", "4A:C5:93:7A:12:DE", "")
-	err2 := callSync(c, opCreate, &crud.CreateArgs{Records: []model.Model{&ni2}}, nil)
-	if !isValidation(err2, devicemanager.ErrRandomizedMAC) {
-		t.Errorf("randomized MAC: err = %v, want ValidationError{ErrRandomizedMAC}", err2)
+	if ni.Mac != "48:F1:7F:D9:D7:B7" {
+		t.Errorf("stored MAC = %q, want canonical 48:F1:7F:D9:D7:B7", ni.Mac)
 	}
-
-	ni3 := iface(d, "dup", "48:F1:7F:D9:D7:B7", "")
-	err3 := callSync(c, opCreate, &crud.CreateArgs{Records: []model.Model{&ni3}}, nil)
-	if !isErr(err3, devicemanager.ErrMACAlreadyExists) {
-		t.Errorf("duplicate MAC: err = %v, want ErrMACAlreadyExists", err3)
+	// El incidente del 2026-10-07: "cambiar diariamente" de Windows inventó esta.
+	if _, err := m.SaveNetworkInterface(iface(d, "wifi2", "4A:C5:93:7A:12:DE", "")); !isValidation(err, devicemanager.ErrRandomizedMAC) {
+		t.Errorf("randomized MAC: err = %v, want ValidationError{ErrRandomizedMAC}", err)
 	}
-
-	opUpdate := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Update}
-	errUpdate := callSync(c, opUpdate, &crud.UpdateArgs{IDs: []string{idNi}, Fields: []string{"label"}, Record: &devicemanager.NetworkInterface{Label: "wifi intel"}}, nil)
-	if errUpdate != nil {
-		t.Errorf("update keeping its own MAC: %v", errUpdate)
+	if _, err := m.SaveNetworkInterface(iface(d, "dup", "48:F1:7F:D9:D7:B7", "")); !isErr(err, devicemanager.ErrMACAlreadyExists) {
+		t.Errorf("duplicate MAC: err = %v, want ErrMACAlreadyExists", err)
+	}
+	// Actualizar la misma interfaz con su propia MAC no es un duplicado.
+	ni.Label = "wifi intel"
+	if _, err := m.SaveNetworkInterface(ni); err != nil {
+		t.Errorf("update keeping its own MAC: %v", err)
 	}
 }
 
 func TestInterface_DeleteDeviceDeletesInterfaces(t *testing.T) {
 	m := setup(t)
-	c := crud.LoopbackActingAs(nil, "u1", m)
-	d, _ := deviceInZone(t, c)
-
-	opCreateNi := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Create}
-	ni := iface(d, "wifi", "", "")
-	if err := callSync(c, opCreateNi, &crud.CreateArgs{Records: []model.Model{&ni}}, nil); err != nil {
-		t.Fatalf("Create network_interface: %v", err)
+	d, _ := deviceInZone(t, m)
+	if _, err := m.SaveNetworkInterface(iface(d, "wifi", "", "")); err != nil {
+		t.Fatalf("SaveNetworkInterface: %v", err)
 	}
-
-	opDeleteDev := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Delete}
-	if err := callSync(c, opDeleteDev, &crud.DeleteArgs{IDs: []string{d.Id}}, nil); err != nil {
+	if err := m.DeleteDevice("tenant-A", d.Id); err != nil {
 		t.Fatalf("DeleteDevice: %v", err)
 	}
-
-	opReadNi := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Read}
-	var left devicemanager.NetworkInterfaceList
-	err := callSync(c, opReadNi, &crud.ReadArgs{Filter: &devicemanager.NetworkInterface{DeviceId: d.Id}}, &left)
+	left, err := m.ListNetworkInterfaces("tenant-A", d.Id, "", "", 0)
 	if err != nil || len(left) != 0 {
 		t.Fatalf("interfaces after deleting the device = %+v (err %v), want none", left, err)
 	}
 }
 
-func TestReaders_FindByIP(t *testing.T) {
+func TestInterface_FindByIPThroughInterface(t *testing.T) {
 	m := setup(t)
-	c := crud.LoopbackActingAs(nil, "u1", m)
-	d, _ := deviceInZone(t, c)
-
-	opCreateNi := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Create}
-	ni := iface(d, "wifi", "", "172.0.0.61")
-	if err := callSync(c, opCreateNi, &crud.CreateArgs{Records: []model.Model{&ni}}, nil); err != nil {
-		t.Fatalf("Create network_interface: %v", err)
+	d, _ := deviceInZone(t, m)
+	if _, err := m.SaveNetworkInterface(iface(d, "wifi", "", "172.0.0.61")); err != nil {
+		t.Fatalf("SaveNetworkInterface: %v", err)
 	}
 	got, err := m.FindByIP("tenant-A", "172.0.0.61")
 	if err != nil || got.Id != d.Id {
@@ -212,6 +140,5 @@ func TestReaders_FindByIP(t *testing.T) {
 
 // isValidation reporta si err es un ValidationError que envuelve a want.
 func isValidation(err, want error) bool {
-	v, ok := err.(*model.FieldError)
-	return ok && v.Err == want
+	return err != nil && model.KindOf(err) == model.ErrorInvalid && strings.HasSuffix(err.Error(), want.Error())
 }

@@ -69,10 +69,10 @@ type DeviceFilter struct {
 // Ejemplo: d, err := dm.GetDevice(tenantID, deviceID)
 func (m *Module) GetDevice(tenantId, id string) (Device, error) {
 	if tenantId != m.tenantID {
-		return Device{}, nil
+		return Device{}, ErrNotFound
 	}
 	var d Device
-	qb := m.db.Query(&d).Where(Device_.Id).Eq(id)
+	qb := m.db.Query(&d).Where(Device_.Id).Eq(id).Where(Device_.TenantId).Eq(tenantId)
 	if _, err := ReadOneDevice(qb, &d); err != nil {
 		if orm.IsNotFound(err) {
 			return Device{}, ErrNotFound
@@ -89,10 +89,10 @@ func (m *Module) GetDevice(tenantId, id string) (Device, error) {
 // Ejemplo: d, err := dm.FindByIP(tenantID, "172.0.0.65")
 func (m *Module) FindByIP(tenantId, ip string) (Device, error) {
 	if tenantId != m.tenantID {
-		return Device{}, nil
+		return Device{}, ErrNotFound
 	}
 	var ni NetworkInterface
-	qb := m.db.Query(&ni).Where(NetworkInterface_.Ip).Eq(input.CanonicalIP(ip))
+	qb := m.db.Query(&ni).Where(NetworkInterface_.Ip).Eq(input.CanonicalIP(ip)).Where(NetworkInterface_.TenantId).Eq(tenantId)
 	if _, err := ReadOneNetworkInterface(qb, &ni); err != nil {
 		if orm.IsNotFound(err) {
 			return Device{}, ErrNotFound
@@ -146,8 +146,3 @@ func (m *Module) ListDevices(tenantId string, filter DeviceFilter) ([]Device, er
 func isValidDeviceType(t string) bool {
 	return t == DeviceTypeComputer || t == DeviceTypePrinter || t == DeviceTypeServer || t == DeviceTypeOther
 }
-
-
-
-
-

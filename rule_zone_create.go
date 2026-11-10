@@ -5,7 +5,6 @@ import (
 	"webtyp.com/input"
 	"webtyp.com/model"
 	"webtyp.com/time"
-	"webtyp.com/storage"
 )
 
 // Create es la regla de negocio de crear zone: valida lo que solo tu dominio sabe y responde si se guarda y si se avisa.
@@ -19,7 +18,7 @@ func (p *Zone) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswe
 	}
 
 	var others []Zone
-	q := crud.Query{Conditions: []storage.Condition{storage.Eq(Zone_.TenantId, p.TenantId)}}
+	q := crud.Query{}
 	err := tx.ReadAll(func() model.Model { return &Zone{} }, q, func(row model.Model) {
 		others = append(others, *row.(*Zone))
 	})

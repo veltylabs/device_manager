@@ -9,7 +9,7 @@ import (
 // Ejemplo: z, err := dm.GetZone(tenantID, zoneID)
 func (m *Module) GetZone(tenantId, id string) (Zone, error) {
 	if tenantId != m.tenantID {
-		return Zone{}, nil
+		return Zone{}, ErrZoneNotFound
 	}
 	var z Zone
 	qb := m.db.Query(&z).Where(Zone_.Id).Eq(id).Where(Zone_.TenantId).Eq(tenantId)
@@ -49,10 +49,6 @@ func (m *Module) ListZones(tenantId string, search, after string, limit int) ([]
 	}
 	return zones, nil
 }
-
-
-
-
 
 // zoneContaining retorna la zona del tenant cuyo rango contiene la ip dada, si existe.
 func zoneContaining(zones []Zone, ip string) (Zone, bool) {

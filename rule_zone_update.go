@@ -5,7 +5,6 @@ import (
 	"webtyp.com/input"
 	"webtyp.com/model"
 	"webtyp.com/time"
-	"webtyp.com/storage"
 )
 
 // Update es la regla de negocio de actualizar zone: old es la fila guardada y el receptor trae solo los campos enviados (fields).
@@ -32,7 +31,7 @@ func (next *Zone) Update(a crud.CurrentUser, tx crud.Tx, old *Zone, fields []str
 	}
 
 	var others []Zone
-	q := crud.Query{Conditions: []storage.Condition{storage.Eq(Zone_.TenantId, next.TenantId)}}
+	q := crud.Query{}
 	err := tx.ReadAll(func() model.Model { return &Zone{} }, q, func(row model.Model) {
 		others = append(others, *row.(*Zone))
 	})

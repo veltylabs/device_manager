@@ -1,80 +1,91 @@
 # device_manager
 <img src="docs/img/badges.svg">
 
-Módulo de inventario de equipos de red para el ecosistema Velty: registro por tenant de computadores,
-impresoras, servidores y otros equipos, sus interfaces de red (MAC + IP), las zonas en las que se ubican
-y el nivel de acceso a la red permitido para cada uno. Es la fuente de verdad que `veltylabs/network_manager`
-aplica al router a través de `webtyp.com/network`.
+## ¿Por qué existe?
 
-## Operaciones
+`device_manager` es el inventario de equipos de red de una clínica: computadores, impresoras, servidores y otros equipos, sus
+interfaces de red (MAC e IP), las zonas donde se ubican y el nivel de acceso a la red de cada uno. Lo encuentras cuando
+[`network_manager`](https://github.com/veltylabs/network_manager) necesita saber qué aplicar al router, o cuando el inicio de
+sesión por red local pregunta qué equipo tiene una IP.
 
-| Operación | Acción | Recurso |
-|---|---|---|
-| `list_devices` | lectura | `device` |
-| `get_device` | lectura | `device` |
-| `create_device` | creación | `device` |
-| `update_device` | actualización | `device` |
-| `upsert_device` | creación/actualización | `device` |
-| `deactivate_device` | actualización | `device` |
-| `delete_device` | eliminación | `device` |
-| `list_zones` | lectura | `zone` |
-| `save_zone` | creación/actualización | `zone` |
-| `delete_zone` | eliminación | `zone` |
-| `list_network_interfaces` | lectura | `network_interface` |
-| `save_network_interface` | creación/actualización | `network_interface` |
-| `delete_network_interface` | eliminación | `network_interface` |
+- **Sin esto:** cada módulo guarda su propia lista de equipos y las IP se repiten o se contradicen.
+- **Con esto:** hay una sola fuente de verdad; la persistencia la hace [`crud`](https://github.com/webtyp/crud) y las reglas
+  del negocio (IP única por inquilino, MAC no aleatoria, rangos de zona sin solapar) viven en los archivos `rule_*.go`
+  ([arquitectura](docs/ARCHITECTURE.md)).
 
-## Inicio rápido
+## Antes de comenzar
+
+- Go instalado y acceso a los módulos `webtyp.com/*` (`GOPRIVATE=webtyp.com/*,github.com/veltylabs/*`).
+- Una base de datos conectada como `*orm.DB`; las tablas las crea [`migrate.Migrate`](migrate/).
+- Un generador de ids (`model.IDGenerator`) y el id del inquilino (`TenantID`): un módulo sirve a un solo inquilino.
+
+## Guía paso a paso
+
+### Paso 1: crear el módulo
+
+**Objetivo:** conectar el inventario a una base en memoria.
 
 ```go
-import devicemanager "github.com/veltylabs/device_manager"
+package main
 
-dm, err := devicemanager.New(db, devicemanager.Deps{
-    IDs:       idGenerator,    // model.IDGenerator, requerido
-    Publisher: eventPublisher, // events.Publisher, opcional
-})
-dm.MountOperations(reg)    // router.OperationRegistry
-// El esquema se actualiza automáticamente con migrate.Migrate, que utiliza ddl.Sync (https://github.com/webtyp/ddl/blob/main/docs/diagrams/SYNC_FLOW.md)
-view := dm.NewView(caller) // router.Caller -> view.Presenter (también NewZoneView, NewNetworkInterfaceView)
+import (
+	devicemanager "github.com/veltylabs/device_manager"
+	"webtyp.com/fmt"
+	"webtyp.com/orm"
+	"webtyp.com/storage/mem"
+	"webtyp.com/unixid"
+)
 
-// Frontera con webtyp.com/network: los hosts que el router debe aplicar, y la
-// importación inicial de configuraciones manuales del router.
-hosts := devicemanager.NetworkHosts{Devices: dm, TenantID: tenant} // network.HostSource + network.HostImporter
+func main() {
+	ids, err := unixid.NewUnixID()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	mod, err := devicemanager.New(orm.New(mem.New()), devicemanager.Deps{IDs: ids, TenantID: "acme"})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(mod.ModelName())
+}
 ```
 
-## Vistas y demo
+**Resultado esperado:** imprime `device_manager`.
 
-El módulo exporta tres pantallas declarativas bajo `ui/` accesibles mediante `ui.Screens(caller)` (Equipos, Zonas, e Interfaces de red).
-Cada pantalla cuenta con su propio dibujo tomado de `webtyp/icons` y una descripción (`view.WithDescription`). Los selectores
-de zonas y equipos se configuran declarativamente mediante `Lookups`.
+### Paso 2: registrar un equipo
 
-Los datos de demostración pueden cargarse usando `seed.Load(m, tenantID)`.
+**Objetivo:** crear un equipo y comprobar que una IP repetida se rechaza.
 
-## Archivos clave
+`CreateDevice`, `SaveNetworkInterface` y los demás métodos de escritura son envoltorios: ejecutan la operación del propio
+módulo (`device.create`, `network_interface.create`…) por su `Loopback`, de modo que las reglas de `rule_*.go` son el único
+camino que escribe. Los ejemplos completos están en [tests/device_test.go](tests/device_test.go) y
+[tests/interface_test.go](tests/interface_test.go).
 
-| Archivo | Propósito |
+**Resultado esperado:** el equipo queda guardado; una segunda interfaz con la misma IP recibe un conflicto.
+
+### Paso 3: ver el módulo en pantalla
+
+**Objetivo:** abrir la demo con datos en memoria. La demo está en [seed/demo.go](seed/demo.go) y se abre con `webtyp` en la raíz del módulo.
+
+**Resultado esperado:** listas de equipos, zonas e interfaces con búsqueda.
+
+## Operaciones: sin y con `crud`
+
+| Antes (manejadores a mano) | Después (declaración + reglas) |
 |---|---|
-| `model.go` | Definiciones de `Device`, `Zone`, `NetworkInterface`, errores y tópicos de eventos |
-| `kinds/` | Tipos cerrados para campos con opciones (tipo de equipo, acceso) — paquete propio para ormc |
-| `model_orm.go` | Generado por `ormc` — no editar |
-| `module.go` | `Module`, `New`, métodos de servicio para equipos |
-| `zone.go`, `interface.go`, `ip.go` | Zonas, interfaces (reglas MAC/IP, autoasignación de IP), utilidades IPv4 |
-| `network.go` | `NetworkHosts`: implementación de `HostSource` y `HostImporter` de `webtyp.com/network` |
-| `ops.go` | `router.OperationModule` — `MountOperations` y manejadores |
-| `view.go` | `NewView`, `NewZoneView`, `NewNetworkInterfaceView` |
+| `list_devices`, `get_device` | `device.read` |
+| `create_device`, `update_device`, `upsert_device`, `deactivate_device` | `device.create`, `device.update` (`deactivate` = `update` de `is_active`) |
+| `delete_device` | `device.delete` (borra antes sus interfaces, en la misma transacción) |
+| `list_zones`, `save_zone`, `delete_zone` | `zone.read`, `zone.create`/`zone.update`, `zone.delete` |
+| `list_network_interfaces`, `save_network_interface`, `delete_network_interface` | `network_interface.read`, `.create`/`.update`, `.delete` |
 
-## Documentación
+El permiso de cada una es su recurso: `device`, `zone` y `network_interface`.
 
-| Documento | Descripción |
-|---|---|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Alcance del dominio, entidades, patrones, tabla de operaciones |
-| [Diagrama de base de datos](docs/diagrams/database.md) | Diagrama ER en Mermaid |
+## Mapa de documentación
 
-## Pantallas, errores y permisos
-
-Las pantallas guardan y borran con `view.MountSave` / `view.MountDelete`; los errores salen por
-`rpc.WriteError` (cada error del módulo es `model.NotFound`, `model.Conflict` o `model.Invalid`), y los
-permisos se nombran con la tabla: `model.ResourceOf(&devicemanager.DeviceModel)`. El tenant lo pone siempre el servidor (`Deps.TenantID`): ninguna operación lee `tenant_id` de la petición, y un registro que llega con otro tenant se guarda en el de esta instalación.
-
-Las listas de esta interfaz se cargan paginadas según declare su `view.Page` (en este caso `view.Page{First: view.All}`)
-y se buscan en el servidor.
+| Orden | Documento | Qué pregunta responde y cuándo leerlo |
+|---|---|---|
+| 1 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | ¿Qué entidades hay y quién decide qué? Léelo antes de tocar una regla. |
+| 2 | [docs/TESTS.md](docs/TESTS.md) | ¿Qué comportamiento está probado? Léelo antes de cambiar una regla. |
+| 3 | [docs/diagrams/database.md](docs/diagrams/database.md) | ¿Cómo se relacionan las tablas? Léelo antes de cambiar el esquema. |

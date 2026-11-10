@@ -356,6 +356,9 @@ func (m *Module) MountOperations(reg crud.Registry) {
 		Update: func(a crud.CurrentUser, tx crud.Tx, old, next model.Model, fields []string) (crud.RuleAnswer, error) {
 			return next.(*Device).Update(a, tx, old.(*Device), fields, m)
 		},
+		Delete: func(a crud.CurrentUser, tx crud.Tx, rec model.Model) (crud.RuleAnswer, error) {
+			return rec.(*Device).Delete(a, tx, m)
+		},
 	})
 	reg.AddStoredEntity(crud.StoredEntity{
 		Model: &Zone{},
