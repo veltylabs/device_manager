@@ -28,8 +28,12 @@ func TestIPLocator(t *testing.T) {
 	}
 
 	// Crear equipo con la misma IP en otro tenant
-	_, err = createWithIP(dm, devicemanager.Device{
-		TenantId: "tenant-2",
+	dm2, err := devicemanager.New(db, devicemanager.Deps{IDs: ids, TenantID: "tenant-2"})
+	if err != nil {
+		t.Fatalf("New tenant-2: %v", err)
+	}
+	_, err = createWithIP(dm2, devicemanager.Device{
+		TenantId: "",
 		Name:     "Box 1 Tenant 2",
 		Type:     devicemanager.DeviceTypeComputer,
 		IsActive: true,

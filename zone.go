@@ -1,17 +1,16 @@
 package devicemanager
 
 import (
-	"webtyp.com/events"
-	"webtyp.com/input"
-	"webtyp.com/model"
 	"webtyp.com/orm"
-	"webtyp.com/time"
 )
 
 // GetZone obtiene una zona por su identificador para un tenant dado.
 //
 // Ejemplo: z, err := dm.GetZone(tenantID, zoneID)
 func (m *Module) GetZone(tenantId, id string) (Zone, error) {
+	if tenantId != m.tenantID {
+		return Zone{}, ErrZoneNotFound
+	}
 	var z Zone
 	qb := m.db.Query(&z).Where(Zone_.Id).Eq(id).Where(Zone_.TenantId).Eq(tenantId)
 	if _, err := ReadOneZone(qb, &z); err != nil {
@@ -27,6 +26,9 @@ func (m *Module) GetZone(tenantId, id string) (Zone, error) {
 //
 // Ejemplo: zonas, err := dm.ListZones(tenantID)
 func (m *Module) ListZones(tenantId string, search, after string, limit int) ([]Zone, error) {
+	if tenantId != m.tenantID {
+		return nil, nil
+	}
 	var z Zone
 	qb := m.db.Query(&z).Where(Zone_.TenantId).Eq(tenantId)
 	if search != "" {
@@ -36,6 +38,7 @@ func (m *Module) ListZones(tenantId string, search, after string, limit int) ([]
 		qb = qb.Where(Zone_.Id).Gt(after)
 	}
 	qb = qb.OrderBy(Zone_.Id).Asc().Limit(limit)
+
 	rows, err := ReadAllZone(qb)
 	if err != nil {
 		return nil, err
@@ -45,84 +48,6 @@ func (m *Module) ListZones(tenantId string, search, after string, limit int) ([]
 		zones[i] = *r
 	}
 	return zones, nil
-}
-
-// SaveZone crea la zona si Id está vacío, o la actualiza si ya existe. Su rango
-// debe ser dos direcciones IPv4 con start <= end y no solaparse con otra zona del tenant.
-//
-// Ejemplo: guardada, err := dm.SaveZone(z)
-func (m *Module) SaveZone(z Zone) (Zone, error) {
-	creating := z.Id == ""
-	z.RangeStart = input.CanonicalIP(z.RangeStart)
-	z.RangeEnd = input.CanonicalIP(z.RangeEnd)
-	start, end, ok := zoneRange(z)
-	if !ok {
-		return Zone{}, &model.FieldError{Field: "range_start", Err: ErrInvalidZoneRange}
-	}
-	action := model.ActionUpdate
-	if creating {
-		z.Id = m.ids.NewID()
-		action = model.ActionCreate
-	}
-	z.UpdatedAt = time.NowNano()
-	if err := z.Validate(action); err != nil {
-		return Zone{}, err
-	}
-	if !creating {
-		if _, err := m.GetZone(z.TenantId, z.Id); err != nil {
-			return Zone{}, err
-		}
-	}
-	others, err := m.ListZones(z.TenantId, "", "", 0)
-	if err != nil {
-		return Zone{}, err
-	}
-	for _, o := range others {
-		if o.Id == z.Id {
-			continue
-		}
-		os, oe, ok := zoneRange(o)
-		if ok && start <= oe && os <= end {
-			return Zone{}, ErrZoneOverlap
-		}
-	}
-	if creating {
-		err = m.db.Create(&z)
-	} else {
-		err = m.db.Update(&z, orm.Eq(Zone_.Id, z.Id), orm.Eq(Zone_.TenantId, z.TenantId))
-	}
-	if err != nil {
-		return Zone{}, err
-	}
-	if m.pub != nil {
-		m.pub.Publish(events.Event{Topic: TopicZoneSaved, Payload: &z})
-	}
-	return z, nil
-}
-
-// DeleteZone elimina una zona que no esté en uso por ningún equipo.
-//
-// Ejemplo: err := dm.DeleteZone(tenantID, zoneID)
-func (m *Module) DeleteZone(tenantId, id string) error {
-	z, err := m.GetZone(tenantId, id)
-	if err != nil {
-		return err
-	}
-	var d Device
-	users, err := ReadAllDevice(m.db.Query(&d).Where(Device_.ZoneId).Eq(id).Where(Device_.TenantId).Eq(tenantId).Limit(1))
-	if err != nil {
-		return err
-	}
-	if len(users) > 0 {
-		return ErrZoneInUse
-	}
-	if err := m.db.Delete(&z, orm.Eq(Zone_.Id, z.Id), orm.Eq(Zone_.TenantId, tenantId)); err != nil {
-		return err
-	}
-	if m.pub != nil {
-		m.pub.Publish(events.Event{Topic: TopicZoneDeleted, Payload: &z})
-	}
-	return nil
 }
 
 // zoneContaining retorna la zona del tenant cuyo rango contiene la ip dada, si existe.

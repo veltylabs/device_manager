@@ -1,9 +1,9 @@
 package tests
 
 import (
-	"webtyp.com/view"
-	"webtyp.com/model"
 	"testing"
+	"webtyp.com/crud"
+	"webtyp.com/model"
 	"webtyp.com/network"
 
 	devicemanager "github.com/veltylabs/device_manager"
@@ -57,8 +57,8 @@ func TestCreateDevice_InvalidType(t *testing.T) {
 		Type:     "not-a-real-type",
 		IsActive: true,
 	})
-	if _, ok := err.(*model.FieldError); !ok {
-		t.Fatalf("expected FieldError for an invalid type, got %v (%T)", err, err)
+	if err == nil || model.KindOf(err) != model.ErrorInvalid {
+		t.Fatalf("expected an invalid-input error for an invalid type, got %v", err)
 	}
 }
 
@@ -75,11 +75,12 @@ func TestCreateDevice_DuplicateIPSameTenant(t *testing.T) {
 }
 
 func TestCreateDevice_SameIPDifferentTenants_Allowed(t *testing.T) {
-	m := setup(t)
-	if _, err := createWithIP(m, devicemanager.Device{TenantId: "tenant-A", Name: "Device A", Type: devicemanager.DeviceTypePrinter, IsActive: true}, "10.0.0.5"); err != nil {
+	db := orm.New(mem.New())
+	a, b := setupTenant(t, db, "tenant-A"), setupTenant(t, db, "tenant-B")
+	if _, err := createWithIP(a, devicemanager.Device{Name: "Device A", Type: devicemanager.DeviceTypePrinter, IsActive: true}, "10.0.0.5"); err != nil {
 		t.Fatalf("CreateDevice tenant-A: %v", err)
 	}
-	if _, err := createWithIP(m, devicemanager.Device{TenantId: "tenant-B", Name: "Device B", Type: devicemanager.DeviceTypePrinter, IsActive: true}, "10.0.0.5"); err != nil {
+	if _, err := createWithIP(b, devicemanager.Device{Name: "Device B", Type: devicemanager.DeviceTypePrinter, IsActive: true}, "10.0.0.5"); err != nil {
 		t.Fatalf("CreateDevice tenant-B (same IP, different tenant): %v", err)
 	}
 }
@@ -137,7 +138,7 @@ func TestListDevices_FilterByTypeAndActive(t *testing.T) {
 		t.Fatalf("DeactivateDevice: %v", err)
 	}
 
-	servers, err := m.ListDevices("tenant-A", devicemanager.DeviceFilter{Type: devicemanager.DeviceTypeServer, Limit: int64(view.Cap(0))})
+	servers, err := m.ListDevices("tenant-A", devicemanager.DeviceFilter{Type: devicemanager.DeviceTypeServer, Limit: int64(crud.Cap(0))})
 	if err != nil {
 		t.Fatalf("ListDevices: %v", err)
 	}
@@ -145,7 +146,7 @@ func TestListDevices_FilterByTypeAndActive(t *testing.T) {
 		t.Fatalf("expected 1 server, got %+v", servers)
 	}
 
-	active, err := m.ListDevices("tenant-A", devicemanager.DeviceFilter{ActiveOnly: true, Limit: int64(view.Cap(0))})
+	active, err := m.ListDevices("tenant-A", devicemanager.DeviceFilter{ActiveOnly: true, Limit: int64(crud.Cap(0))})
 	if err != nil {
 		t.Fatalf("ListDevices: %v", err)
 	}
@@ -169,14 +170,15 @@ func TestCreateDevice_PublishesEvent(t *testing.T) {
 		t.Fatalf("expected 1 published event, got %d", len(pub.Events))
 	}
 	event := pub.Events[0]
-	if event.Topic != devicemanager.TopicDeviceCreated {
-		t.Fatalf("expected topic %q, got %q", devicemanager.TopicDeviceCreated, event.Topic)
+	wantTopic := crud.Topic(devicemanager.ModelName, (&devicemanager.Device{}).ModelName(), model.Create)
+	if event.Topic != wantTopic {
+		t.Fatalf("expected topic %q, got %q", wantTopic, event.Topic)
 	}
-	payload, ok := event.Payload.(*devicemanager.Device)
+	change, ok := event.Payload.(*crud.Change)
 	if !ok {
-		t.Fatalf("expected payload type *Device, got %T", event.Payload)
+		t.Fatalf("expected payload type *crud.Change, got %T", event.Payload)
 	}
-	if payload.Id != d.Id {
-		t.Fatalf("expected payload Id %q, got %q", d.Id, payload.Id)
+	if payload, ok := change.Record.(*devicemanager.Device); !ok || payload.Id != d.Id {
+		t.Fatalf("expected the created device %q in the change, got %+v", d.Id, change.Record)
 	}
 }

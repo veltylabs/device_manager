@@ -1,8 +1,10 @@
 package tests
 
 import (
-	"webtyp.com/model"
 	"testing"
+	"webtyp.com/model"
+	"webtyp.com/orm"
+	"webtyp.com/storage/mem"
 
 	devicemanager "github.com/veltylabs/device_manager"
 )
@@ -40,9 +42,9 @@ func TestZone_InvalidRange(t *testing.T) {
 		{TenantId: "tenant-A", Name: "ipv6", RangeStart: "::1", RangeEnd: "::2"},
 	} {
 		if _, err := m.SaveZone(z); err == nil {
-				t.Errorf("SaveZone(%s) = nil, want a FieldError", z.Name)
-			} else if _, ok := err.(*model.FieldError); !ok {
-				t.Errorf("SaveZone(%s) = %v (%T), want FieldError", z.Name, err, err)
+			t.Errorf("SaveZone(%s) = nil, want a FieldError", z.Name)
+		} else if model.KindOf(err) != model.ErrorInvalid {
+			t.Errorf("SaveZone(%s) = %v, want an invalid-input error", z.Name, err)
 		}
 	}
 }
@@ -57,7 +59,8 @@ func TestZone_Overlap(t *testing.T) {
 		t.Fatalf("overlapping zone: err = %v, want ErrZoneOverlap", err)
 	}
 	// Mismo rango en otro tenant es válido: las zonas son por tenant.
-	if _, err := m.SaveZone(zoneAP06("tenant-B")); err != nil {
+	other := setupTenant(t, orm.New(mem.New()), "tenant-B")
+	if _, err := other.SaveZone(zoneAP06("tenant-B")); err != nil {
 		t.Fatalf("same range, other tenant: %v", err)
 	}
 }
@@ -74,17 +77,23 @@ func TestZone_DeleteInUse(t *testing.T) {
 }
 
 func TestZone_TenantIsolation(t *testing.T) {
-	m := setup(t)
-	z, _ := m.SaveZone(zoneAP06("tenant-A"))
-	if _, err := m.GetZone("tenant-B", z.Id); !isErr(err, devicemanager.ErrZoneNotFound) {
+	db := orm.New(mem.New())
+	modA, modB := setupTenant(t, db, "tenant-A"), setupTenant(t, db, "tenant-B")
+	z, err := modA.SaveZone(zoneAP06("tenant-A"))
+	if err != nil {
+		t.Fatalf("SaveZone: %v", err)
+	}
+	if _, err := modB.GetZone("tenant-B", z.Id); !isErr(err, devicemanager.ErrZoneNotFound) {
 		t.Errorf("tenant B read tenant A's zone: err = %v", err)
 	}
-	if err := m.DeleteZone("tenant-B", z.Id); !isErr(err, devicemanager.ErrZoneNotFound) {
-		t.Errorf("tenant B deleted tenant A's zone: err = %v", err)
+	if err := modB.DeleteZone("tenant-B", z.Id); err == nil {
+		t.Errorf("tenant B deleted tenant A's zone")
 	}
 	hijack := z
-	hijack.TenantId = "tenant-B"
-	if _, err := m.SaveZone(hijack); !isErr(err, devicemanager.ErrZoneNotFound) {
-		t.Errorf("tenant B updated tenant A's zone: err = %v", err)
+	if _, err := modB.SaveZone(hijack); err == nil {
+		t.Errorf("tenant B updated tenant A's zone")
+	}
+	if _, err := modA.GetZone("tenant-A", z.Id); err != nil {
+		t.Errorf("tenant A's zone must be untouched: %v", err)
 	}
 }

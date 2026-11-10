@@ -1,8 +1,9 @@
 package tests
 
 import (
-	"webtyp.com/model"
+	"strings"
 	"testing"
+	"webtyp.com/model"
 
 	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/network"
@@ -139,6 +140,5 @@ func TestInterface_FindByIPThroughInterface(t *testing.T) {
 
 // isValidation reporta si err es un ValidationError que envuelve a want.
 func isValidation(err, want error) bool {
-	v, ok := err.(*model.FieldError)
-	return ok && v.Err == want
+	return err != nil && model.KindOf(err) == model.ErrorInvalid && strings.HasSuffix(err.Error(), want.Error())
 }

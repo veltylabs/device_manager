@@ -5,6 +5,7 @@ package module
 import (
 	"webtyp.com/appkit"
 	"webtyp.com/model"
+	"webtyp.com/view"
 
 	devicemanager "github.com/veltylabs/device_manager"
 )
@@ -15,7 +16,7 @@ var server = appkit.ModuleServer{
 }
 
 // En el servidor el módulo no aporta pantallas.
-var browser appkit.ModuleBrowser
+var browser view.ModuleBrowser
 
 func build(d appkit.Deps) (model.ModuleNaming, error) {
 	m, err := devicemanager.New(d.DB, devicemanager.Deps{IDs: d.IDs, Publisher: d.Events, TenantID: d.TenantID})

@@ -52,3 +52,17 @@ func createWithIP(m *devicemanager.Module, d devicemanager.Device, ip string) (d
 	_, err = m.SaveNetworkInterface(devicemanager.NetworkInterface{TenantId: d.TenantId, DeviceId: created.Id, Label: testIfaceLabel, Ip: ip})
 	return created, err
 }
+
+// sharedIDs is one id generator for every module of a test: two tenants over one database must not mint the same id.
+var sharedIDs = &mockIDGen{}
+
+// setupTenant builds a module of `tenant` over the SAME database as other modules: one module serves one tenant,
+// so a second tenant is a second module.
+func setupTenant(t *testing.T, db *orm.DB, tenant string) *devicemanager.Module {
+	t.Helper()
+	m, err := devicemanager.New(db, devicemanager.Deps{IDs: sharedIDs, TenantID: tenant})
+	if err != nil {
+		t.Fatalf("New(%s): %v", tenant, err)
+	}
+	return m
+}

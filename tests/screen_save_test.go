@@ -4,29 +4,29 @@ import (
 	"testing"
 
 	devicemanager "github.com/veltylabs/device_manager"
+	"webtyp.com/crud"
 	"webtyp.com/model"
-	"webtyp.com/router/loopback"
 	"webtyp.com/view"
 )
 
 func TestScreenSave(t *testing.T) {
 	dm := setup(t)
 
-	caller := view.NewRecords().Caller(loopback.ActingAs("tenant-A", "user-1", dm))
+	caller := view.NewRecords().Caller(crud.LoopbackActingAs(nil, "user-1", dm))
 
 	// Device
-	dlister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName, List: devicemanager.OpListDevices, Save: devicemanager.OpUpsertDevice, Delete: devicemanager.OpDeleteDevice}, func() model.ModelSlice { return &devicemanager.DeviceList{} })
+	dlister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName}, func() model.TableSlice { return &devicemanager.DeviceList{} })
 	saver := dlister.(view.Saver)
 	deleter := dlister.(view.Deleter)
 
-	d := &devicemanager.Device{TenantId: "tenant-A", Name: "test-device", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true}
+	d := &devicemanager.Device{Name: "test-device", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true}
 	var saveErr error
 	saver.Save([]model.Model{d}, func(err error) { saveErr = err })
 	if saveErr != nil {
 		t.Fatal(saveErr)
 	}
 	if d.Id == "" {
-		list, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
+		list, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(crud.Cap(0))})
 		d.Id = list[0].Id
 	}
 
@@ -37,11 +37,11 @@ func TestScreenSave(t *testing.T) {
 	}
 
 	// Zone
-	zlister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName, List: devicemanager.OpListZones, Save: devicemanager.OpSaveZone, Delete: devicemanager.OpDeleteZone}, func() model.ModelSlice { return &devicemanager.ZoneList{} })
+	zlister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName}, func() model.TableSlice { return &devicemanager.ZoneList{} })
 	zsaver := zlister.(view.Saver)
 	zdeleter := zlister.(view.Deleter)
 
-	z := &devicemanager.Zone{TenantId: "tenant-A", Name: "test-zone", RangeStart: "10.0.0.1", RangeEnd: "10.0.0.10"}
+	z := &devicemanager.Zone{Name: "test-zone", RangeStart: "10.0.0.1", RangeEnd: "10.0.0.10"}
 	zsaver.Save([]model.Model{z}, func(err error) { saveErr = err })
 	if saveErr != nil {
 		t.Fatal(saveErr)
@@ -52,24 +52,28 @@ func TestScreenSave(t *testing.T) {
 	}
 
 	// NetworkInterface
-	nilister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName, List: devicemanager.OpListNetworkInterfaces, Save: devicemanager.OpSaveNetworkInterface, Delete: devicemanager.OpDeleteNetworkInterface}, func() model.ModelSlice { return &devicemanager.NetworkInterfaceList{} })
+	nilister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName}, func() model.TableSlice { return &devicemanager.NetworkInterfaceList{} })
 	nisaver := nilister.(view.Saver)
 	nideleter := nilister.(view.Deleter)
 
-	ni := &devicemanager.NetworkInterface{TenantId: "tenant-A", DeviceId: "test", Label: "eth0", Mac: "00:11:22:33:44:55", Ip: "10.0.0.1"}
+	ni := &devicemanager.NetworkInterface{DeviceId: "test", Label: "eth0", Mac: "00:11:22:33:44:55", Ip: "10.0.0.1"}
 	nisaver.Save([]model.Model{ni}, func(err error) { saveErr = err })
 	if saveErr == nil {
 		t.Fatal("expected error saving interface with invalid device id")
 	}
 
 	// Create device first for the interface
-	devForIface := &devicemanager.Device{TenantId: "tenant-A", Name: "dev2", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true}
+	devForIface := &devicemanager.Device{Name: "dev2", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true}
 	saver.Save([]model.Model{devForIface}, func(err error) { saveErr = err })
 	if saveErr != nil {
 		t.Fatal(saveErr)
 	}
-	list_dev2, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
-	devForIface.Id = list_dev2[len(list_dev2)-1].Id
+	list_dev2, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(crud.Cap(0))})
+	for _, row := range list_dev2 { // ids sort as text: pick the device by its name
+		if row.Name == devForIface.Name {
+			devForIface.Id = row.Id
+		}
+	}
 
 	ni.DeviceId = devForIface.Id
 	nisaver.Save([]model.Model{ni}, func(err error) { saveErr = err })
@@ -82,32 +86,44 @@ func TestScreenSave(t *testing.T) {
 	}
 
 	// IP Conflict test
-	z2 := &devicemanager.Zone{TenantId: "tenant-A", Name: "test-zone-2", RangeStart: "10.10.0.1", RangeEnd: "10.10.0.1"}
+	z2 := &devicemanager.Zone{Name: "test-zone-2", RangeStart: "10.10.0.1", RangeEnd: "10.10.0.1"}
 	zsaver.Save([]model.Model{z2}, func(err error) {})
 	list_z2, _ := dm.ListZones("tenant-A", "", "", 0)
-	z2.Id = list_z2[len(list_z2)-1].Id
+	for _, row := range list_z2 { // ids sort as text ("test-id-9" > "test-id-12"): pick the zone by its name
+		if row.Name == z2.Name {
+			z2.Id = row.Id
+		}
+	}
 
-	devForConflict := &devicemanager.Device{TenantId: "tenant-A", Name: "dev-conflict", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true, ZoneId: z2.Id}
+	devForConflict := &devicemanager.Device{Name: "dev-conflict", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true, ZoneId: z2.Id}
 	saver.Save([]model.Model{devForConflict}, func(err error) {})
-	list_devConf, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
-	devForConflict.Id = list_devConf[len(list_devConf)-1].Id
+	list_devConf, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(crud.Cap(0))})
+	for _, row := range list_devConf { // ids sort as text: pick the device by its name
+		if row.Name == devForConflict.Name {
+			devForConflict.Id = row.Id
+		}
+	}
 
-	ni2 := &devicemanager.NetworkInterface{TenantId: "tenant-A", DeviceId: devForConflict.Id, Label: "eth0"}
+	ni2 := &devicemanager.NetworkInterface{DeviceId: devForConflict.Id, Label: "eth0"}
 	nisaver.Save([]model.Model{ni2}, func(err error) {}) // Takes 10.10.0.1
 
-	devForConflict2 := &devicemanager.Device{TenantId: "tenant-A", Name: "dev-conflict2", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true, ZoneId: z2.Id}
+	devForConflict2 := &devicemanager.Device{Name: "dev-conflict2", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true, ZoneId: z2.Id}
 	saver.Save([]model.Model{devForConflict2}, func(err error) {})
-	list_devConf2, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
-	devForConflict2.Id = list_devConf2[len(list_devConf2)-1].Id
+	list_devConf2, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(crud.Cap(0))})
+	for _, row := range list_devConf2 { // ids sort as text: pick the device by its name
+		if row.Name == devForConflict2.Name {
+			devForConflict2.Id = row.Id
+		}
+	}
 
-	ni3 := &devicemanager.NetworkInterface{TenantId: "tenant-A", DeviceId: devForConflict2.Id, Label: "eth1"}
+	ni3 := &devicemanager.NetworkInterface{DeviceId: devForConflict2.Id, Label: "eth1"}
 	nisaver.Save([]model.Model{ni3}, func(err error) { saveErr = err })
 	if model.KindOf(saveErr) != model.ErrorConflict {
 		t.Fatalf("expected ErrorConflict (ZoneFull), got %v", saveErr)
 	}
 
 	// Attempt manual IP conflict
-	ni4 := &devicemanager.NetworkInterface{TenantId: "tenant-A", DeviceId: devForConflict2.Id, Label: "eth2", Ip: "10.10.0.1"}
+	ni4 := &devicemanager.NetworkInterface{DeviceId: devForConflict2.Id, Label: "eth2", Ip: "10.10.0.1"}
 	nisaver.Save([]model.Model{ni4}, func(err error) { saveErr = err })
 	if model.KindOf(saveErr) != model.ErrorConflict {
 		t.Fatalf("expected ErrorConflict (IPAlreadyExists), got %v", saveErr)
@@ -124,55 +140,33 @@ func TestScreenSave(t *testing.T) {
 	}
 }
 
-func TestScreen_SaveIgnoresTenantFromRequest(t *testing.T) {
+func TestScreen_TenantFromRequestIsRejected(t *testing.T) {
 	dm := setup(t)
 
-	caller := view.NewRecords().Caller(loopback.ActingAs("tenant-A", "user-1", dm))
+	caller := view.NewRecords().Caller(crud.LoopbackActingAs(nil, "user-1", dm))
 
-	// Device
-	dlister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName, List: devicemanager.OpListDevices, Save: devicemanager.OpUpsertDevice, Delete: devicemanager.OpDeleteDevice}, func() model.ModelSlice { return &devicemanager.DeviceList{} })
+	dlister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName}, func() model.TableSlice { return &devicemanager.DeviceList{} })
 	saver := dlister.(view.Saver)
 
 	d := &devicemanager.Device{TenantId: "other-tenant", Name: "test-device", Type: devicemanager.DeviceTypeComputer, Access: "local", IsActive: true}
 	var saveErr error
 	saver.Save([]model.Model{d}, func(err error) { saveErr = err })
-	if saveErr != nil {
-		t.Fatal(saveErr)
+	if saveErr == nil {
+		t.Fatal("a tenant_id sent by the client must be refused (ServerOnly)")
+	}
+	if list, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(crud.Cap(0))}); len(list) != 0 {
+		t.Fatalf("nothing may be stored, got %d devices", len(list))
 	}
 
-	listA, _ := dm.ListDevices("tenant-A", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
-	if len(listA) != 1 {
-		t.Fatalf("expected 1 device in tenant-A, got %d", len(listA))
-	}
-	if listA[0].TenantId != "tenant-A" {
-		t.Fatalf("expected device to have TenantId 'tenant-A', got %q", listA[0].TenantId)
-	}
-
-	listOther, _ := dm.ListDevices("other-tenant", devicemanager.DeviceFilter{Limit: int64(view.Cap(0))})
-	if len(listOther) != 0 {
-		t.Fatalf("expected 0 devices in other-tenant, got %d", len(listOther))
-	}
-
-	// Zone
-	zlister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName, List: devicemanager.OpListZones, Save: devicemanager.OpSaveZone, Delete: devicemanager.OpDeleteZone}, func() model.ModelSlice { return &devicemanager.ZoneList{} })
+	zlister := view.NewCallerLister(caller, view.Ops{Module: devicemanager.ModelName}, func() model.TableSlice { return &devicemanager.ZoneList{} })
 	zsaver := zlister.(view.Saver)
 
 	z := &devicemanager.Zone{TenantId: "other-tenant", Name: "test-zone", RangeStart: "10.0.0.1", RangeEnd: "10.0.0.10"}
 	zsaver.Save([]model.Model{z}, func(err error) { saveErr = err })
-	if saveErr != nil {
-		t.Fatal(saveErr)
+	if saveErr == nil {
+		t.Fatal("a tenant_id sent by the client must be refused (ServerOnly)")
 	}
-
-	listZA, _ := dm.ListZones("tenant-A", "", "", 0)
-	if len(listZA) != 1 {
-		t.Fatalf("expected 1 zone in tenant-A, got %d", len(listZA))
-	}
-	if listZA[0].TenantId != "tenant-A" {
-		t.Fatalf("expected zone to have TenantId 'tenant-A', got %q", listZA[0].TenantId)
-	}
-
-	listZOther, _ := dm.ListZones("other-tenant", "", "", 0)
-	if len(listZOther) != 0 {
-		t.Fatalf("expected 0 zones in other-tenant, got %d", len(listZOther))
+	if list, _ := dm.ListZones("tenant-A", "", "", 0); len(list) != 0 {
+		t.Fatalf("nothing may be stored, got %d zones", len(list))
 	}
 }

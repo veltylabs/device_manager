@@ -1,17 +1,16 @@
 package devicemanager
 
 import (
-	"webtyp.com/events"
-	"webtyp.com/input"
-	"webtyp.com/model"
 	"webtyp.com/orm"
-	"webtyp.com/time"
 )
 
 // GetNetworkInterface obtiene una interfaz de red por su identificador para un tenant dado.
 //
 // Ejemplo: iface, err := dm.GetNetworkInterface(tenantID, ifaceID)
 func (m *Module) GetNetworkInterface(tenantId, id string) (NetworkInterface, error) {
+	if tenantId != m.tenantID {
+		return NetworkInterface{}, ErrNotFound
+	}
 	var ni NetworkInterface
 	qb := m.db.Query(&ni).Where(NetworkInterface_.Id).Eq(id).Where(NetworkInterface_.TenantId).Eq(tenantId)
 	if _, err := ReadOneNetworkInterface(qb, &ni); err != nil {
@@ -28,6 +27,9 @@ func (m *Module) GetNetworkInterface(tenantId, id string) (NetworkInterface, err
 //
 // Ejemplo: ifaces, err := dm.ListNetworkInterfaces(tenantID, deviceID)
 func (m *Module) ListNetworkInterfaces(tenantId, deviceId, search, after string, limit int) ([]NetworkInterface, error) {
+	if tenantId != m.tenantID {
+		return nil, nil
+	}
 	var ni NetworkInterface
 	qb := m.db.Query(&ni).Where(NetworkInterface_.TenantId).Eq(tenantId)
 	if deviceId != "" {
@@ -40,6 +42,7 @@ func (m *Module) ListNetworkInterfaces(tenantId, deviceId, search, after string,
 		qb = qb.Where(NetworkInterface_.Id).Gt(after)
 	}
 	qb = qb.OrderBy(NetworkInterface_.Id).Asc().Limit(limit)
+
 	rows, err := ReadAllNetworkInterface(qb)
 	if err != nil {
 		return nil, err
@@ -49,117 +52,6 @@ func (m *Module) ListNetworkInterfaces(tenantId, deviceId, search, after string,
 		out[i] = *r
 	}
 	return out, nil
-}
-
-// SaveNetworkInterface crea la interfaz si Id está vacío, o la actualiza si ya existe.
-// Aplica las reglas de unicidad y validación de MAC e IP detalladas en docs/ARCHITECTURE.md.
-//
-// Ejemplo: guardada, err := dm.SaveNetworkInterface(ni)
-func (m *Module) SaveNetworkInterface(ni NetworkInterface) (NetworkInterface, error) {
-	creating := ni.Id == ""
-	dev, err := m.GetDevice(ni.TenantId, ni.DeviceId)
-	if err != nil {
-		return NetworkInterface{}, err
-	}
-	if !creating {
-		if _, err := m.GetNetworkInterface(ni.TenantId, ni.Id); err != nil {
-			return NetworkInterface{}, err
-		}
-	}
-
-	if ni.Mac != "" {
-		ni.Mac = input.CanonicalMAC(ni.Mac)
-		if input.IsLocallyAdministeredMAC(ni.Mac) {
-			return NetworkInterface{}, &model.FieldError{Field: "mac", Err: ErrRandomizedMAC}
-		}
-		var other NetworkInterface
-		dup, err := ReadAllNetworkInterface(m.db.Query(&other).
-			Where(NetworkInterface_.Mac).Eq(ni.Mac).
-			Where(NetworkInterface_.TenantId).Eq(ni.TenantId).
-			Where(NetworkInterface_.Id).Neq(ni.Id).Limit(1))
-		if err != nil {
-			return NetworkInterface{}, err
-		}
-		if len(dup) > 0 {
-			return NetworkInterface{}, ErrMACAlreadyExists
-		}
-	}
-
-	all, err := m.ListNetworkInterfaces(ni.TenantId, "", "", "", 0)
-	if err != nil {
-		return NetworkInterface{}, err
-	}
-	var zone Zone
-	hasZone := dev.ZoneId != ""
-	if hasZone {
-		if zone, err = m.GetZone(dev.TenantId, dev.ZoneId); err != nil {
-			return NetworkInterface{}, err
-		}
-	}
-
-	if ni.Ip == "" {
-		if !hasZone {
-			return NetworkInterface{}, &model.FieldError{Field: "ip", Err: ErrNoZone}
-		}
-		ip, ok := freeIP(zone, all, ni.Id)
-		if !ok {
-			return NetworkInterface{}, ErrZoneFull
-		}
-		ni.Ip = ip
-	} else {
-		ni.Ip = input.CanonicalIP(ni.Ip)
-		if hasZone {
-			n, okIP := ipv4ToUint32(ni.Ip)
-			s, e, okZone := zoneRange(zone)
-			if !okIP || !okZone || n < s || n > e {
-				return NetworkInterface{}, &model.FieldError{Field: "ip", Err: ErrIPOutsideZone}
-			}
-		}
-		for _, o := range all {
-			if o.Id != ni.Id && o.Ip == ni.Ip {
-				return NetworkInterface{}, ErrIPAlreadyExists
-			}
-		}
-	}
-
-	action := model.ActionUpdate
-	if creating {
-		ni.Id = m.ids.NewID()
-		action = model.ActionCreate
-	}
-	ni.UpdatedAt = time.NowNano()
-	if err := ni.Validate(action); err != nil {
-		return NetworkInterface{}, err
-	}
-	if creating {
-		err = m.db.Create(&ni)
-	} else {
-		err = m.db.Update(&ni, orm.Eq(NetworkInterface_.Id, ni.Id), orm.Eq(NetworkInterface_.TenantId, ni.TenantId))
-	}
-	if err != nil {
-		return NetworkInterface{}, err
-	}
-	if m.pub != nil {
-		m.pub.Publish(events.Event{Topic: TopicNetworkInterfaceSaved, Payload: &ni})
-	}
-	return ni, nil
-}
-
-// DeleteNetworkInterface elimina una interfaz de red por su identificador.
-//
-// Ejemplo: err := dm.DeleteNetworkInterface(tenantID, ifaceID)
-func (m *Module) DeleteNetworkInterface(tenantId, id string) error {
-	ni, err := m.GetNetworkInterface(tenantId, id)
-	if err != nil {
-		return err
-	}
-	if err := m.db.Delete(&ni, orm.Eq(NetworkInterface_.Id, ni.Id), orm.Eq(NetworkInterface_.TenantId, tenantId)); err != nil {
-		return err
-	}
-	if m.pub != nil {
-		m.pub.Publish(events.Event{Topic: TopicNetworkInterfaceDeleted, Payload: &ni})
-	}
-	return nil
 }
 
 // freeIP retorna la dirección más baja de la zona que no esté asignada a ninguna otra interfaz distinta de self.
