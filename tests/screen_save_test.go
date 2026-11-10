@@ -5,7 +5,7 @@ import (
 
 	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/model"
-	"webtyp.com/router/loopback"
+
 	"webtyp.com/view"
 )
 

@@ -88,3 +88,7 @@ Las fechas que ve una persona salen de la zona de la instalación (`Deps.Zone` /
 
 Las pantallas correspondientes a listas cargan sus registros tal como declaran en su propiedad `view.Page` y
 resuelven las búsquedas en el servidor mediante parámetros como `search` y `after`.
+
+
+### Persistencia vs Reglas de Dominio
+La persistencia es manejada automáticamente por el framework `crud` mediante la definición en `definition.go`. Las reglas de negocio específicas están en los archivos de reglas y se invocan por hooks del framework.

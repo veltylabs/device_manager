@@ -4,6 +4,8 @@ import (
 	"webtyp.com/view"
 	"webtyp.com/model"
 	"testing"
+	"webtyp.com/crud"
+	"webtyp.com/router"
 	"webtyp.com/network"
 
 	devicemanager "github.com/veltylabs/device_manager"
@@ -27,20 +29,25 @@ func TestNew_RequiresTenantID(t *testing.T) {
 
 func TestCreateDevice_HappyPath(t *testing.T) {
 	m := setup(t)
-	d, err := m.CreateDevice(devicemanager.Device{
-		TenantId: "tenant-A",
+	c := crud.LoopbackActingAs(nil, "u1", m)
+	op := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
+
+	d := &devicemanager.Device{
 		Name:     "Pc Recepcion",
 		Type:     devicemanager.DeviceTypeComputer,
 		IsActive: true,
-	})
+	}
+
+	var out devicemanager.Device
+	err := c.Call(op, d, &out)
 	if err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
-	if d.Id == "" {
+	if out.Id == "" {
 		t.Fatal("expected a generated Id")
 	}
 
-	got, err := m.GetDevice("tenant-A", d.Id)
+	got, err := m.GetDevice("tenant-A", out.Id)
 	if err != nil {
 		t.Fatalf("GetDevice: %v", err)
 	}
@@ -51,105 +58,161 @@ func TestCreateDevice_HappyPath(t *testing.T) {
 
 func TestCreateDevice_InvalidType(t *testing.T) {
 	m := setup(t)
-	_, err := m.CreateDevice(devicemanager.Device{
-		TenantId: "tenant-A",
+	c := crud.LoopbackActingAs(nil, "u1", m)
+	op := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
+
+	d := &devicemanager.Device{
 		Name:     "Bad",
 		Type:     "not-a-real-type",
 		IsActive: true,
-	})
+	}
+
+	err := c.Call(op, d, nil)
 	if _, ok := err.(*model.FieldError); !ok {
 		t.Fatalf("expected FieldError for an invalid type, got %v (%T)", err, err)
 	}
 }
 
-func TestCreateDevice_DuplicateIPSameTenant(t *testing.T) {
+func TestDevice_DuplicateIPRejected(t *testing.T) {
 	m := setup(t)
-	base := devicemanager.Device{TenantId: "tenant-A", Name: "First", Type: devicemanager.DeviceTypeServer, IsActive: true}
-	if _, err := createWithIP(m, base, "192.168.1.12"); err != nil {
+	c := crud.LoopbackActingAs(nil, "u1", m)
+
+	base := devicemanager.Device{Name: "First", Type: devicemanager.DeviceTypeServer, IsActive: true}
+	if _, err := createWithIP(c, base, "192.168.1.12"); err != nil {
 		t.Fatalf("createWithIP (first): %v", err)
 	}
-	_, err := createWithIP(m, devicemanager.Device{TenantId: "tenant-A", Name: "Second", Type: devicemanager.DeviceTypeServer, IsActive: true}, "192.168.1.12")
+	_, err := createWithIP(c, devicemanager.Device{Name: "Second", Type: devicemanager.DeviceTypeServer, IsActive: true}, "192.168.1.12")
 	if !isErr(err, devicemanager.ErrIPAlreadyExists) {
 		t.Fatalf("expected ErrIPAlreadyExists, got %v", err)
 	}
 }
 
 func TestCreateDevice_SameIPDifferentTenants_Allowed(t *testing.T) {
-	m := setup(t)
-	if _, err := createWithIP(m, devicemanager.Device{TenantId: "tenant-A", Name: "Device A", Type: devicemanager.DeviceTypePrinter, IsActive: true}, "10.0.0.5"); err != nil {
+	mA := setup(t) // tenant-A
+	cA := crud.LoopbackActingAs(nil, "u1", mA)
+
+	db := orm.New(mem.New())
+	mB, _ := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, TenantID: "tenant-B"})
+	cB := crud.LoopbackActingAs(nil, "u1", mB)
+
+	if _, err := createWithIP(cA, devicemanager.Device{Name: "Device A", Type: devicemanager.DeviceTypePrinter, IsActive: true}, "10.0.0.5"); err != nil {
 		t.Fatalf("CreateDevice tenant-A: %v", err)
 	}
-	if _, err := createWithIP(m, devicemanager.Device{TenantId: "tenant-B", Name: "Device B", Type: devicemanager.DeviceTypePrinter, IsActive: true}, "10.0.0.5"); err != nil {
+	if _, err := createWithIP(cB, devicemanager.Device{Name: "Device B", Type: devicemanager.DeviceTypePrinter, IsActive: true}, "10.0.0.5"); err != nil {
 		t.Fatalf("CreateDevice tenant-B (same IP, different tenant): %v", err)
 	}
 }
 
 func TestUpdateDevice_NotFound(t *testing.T) {
 	m := setup(t)
-	_, err := m.UpdateDevice(devicemanager.Device{Id: "does-not-exist", TenantId: "tenant-A", Name: "Device X", Type: devicemanager.DeviceTypeOther, Access: network.AccessLocalName, IsActive: true})
+	c := crud.LoopbackActingAs(nil, "u1", m)
+	op := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Update}
+
+	d := &devicemanager.Device{Id: "does-not-exist", Name: "Device X", Type: devicemanager.DeviceTypeOther, Access: network.AccessLocalName, IsActive: true}
+	err := c.Call(op, d, nil)
 	if !isErr(err, devicemanager.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
 
-func TestDeactivateDevice(t *testing.T) {
-	m := setup(t)
-	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Device X", Type: devicemanager.DeviceTypeOther, IsActive: true})
-	if err != nil {
+func TestDevice_DeactivatePublishesOnce(t *testing.T) {
+	pub := &mockPublisher{}
+	db := orm.New(mem.New())
+	m, _ := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, TenantID: "tenant-A"})
+
+	c := crud.LoopbackActingAs(pub, "u1", m)
+	opCreate := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
+
+	d := &devicemanager.Device{Name: "Device X", Type: devicemanager.DeviceTypeOther, IsActive: true}
+	var out devicemanager.Device
+	if err := c.Call(opCreate, d, &out); err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
-	if err := m.DeactivateDevice("tenant-A", d.Id); err != nil {
+
+	pub.Events = nil // clear create event
+
+	opUpdate := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Update}
+	updateData := map[string]interface{}{"id": out.Id, "is_active": false}
+
+	if err := c.Call(opUpdate, updateData, &out); err != nil {
 		t.Fatalf("DeactivateDevice: %v", err)
 	}
-	got, err := m.GetDevice("tenant-A", d.Id)
+
+	got, err := m.GetDevice("tenant-A", out.Id)
 	if err != nil {
 		t.Fatalf("GetDevice: %v", err)
 	}
 	if got.IsActive {
 		t.Fatal("expected IsActive=false after DeactivateDevice")
 	}
+
+	if len(pub.Events) != 1 {
+		t.Fatalf("expected 1 published event, got %d", len(pub.Events))
+	}
+	event := pub.Events[0]
+	if event.Topic != "device_manager.device.updated" {
+		t.Fatalf("expected topic %q, got %q", "device_manager.device.updated", event.Topic)
+	}
 }
 
 func TestDeleteDevice(t *testing.T) {
 	m := setup(t)
-	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Device X", Type: devicemanager.DeviceTypeOther, IsActive: true})
-	if err != nil {
+	c := crud.LoopbackActingAs(nil, "u1", m)
+	opCreate := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
+
+	d := &devicemanager.Device{Name: "Device X", Type: devicemanager.DeviceTypeOther, IsActive: true}
+	var out devicemanager.Device
+	if err := c.Call(opCreate, d, &out); err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
-	if err := m.DeleteDevice("tenant-A", d.Id); err != nil {
+
+	opDelete := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Delete}
+	req := map[string]interface{}{"id": out.Id}
+	if err := c.Call(opDelete, req, nil); err != nil {
 		t.Fatalf("DeleteDevice: %v", err)
 	}
-	if _, err := m.GetDevice("tenant-A", d.Id); !isErr(err, devicemanager.ErrNotFound) {
+
+	if _, err := m.GetDevice("tenant-A", out.Id); !isErr(err, devicemanager.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound after delete, got %v", err)
 	}
 }
 
 func TestListDevices_FilterByTypeAndActive(t *testing.T) {
 	m := setup(t)
-	if _, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Srv1", Type: devicemanager.DeviceTypeServer, IsActive: true}); err != nil {
+	c := crud.LoopbackActingAs(nil, "u1", m)
+	opCreate := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
+
+	srv := &devicemanager.Device{Name: "Srv1", Type: devicemanager.DeviceTypeServer, IsActive: true}
+	var outSrv devicemanager.Device
+	if err := c.Call(opCreate, srv, &outSrv); err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
-	pc, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Pc1", Type: devicemanager.DeviceTypeComputer, IsActive: true})
-	if err != nil {
+
+	pc := &devicemanager.Device{Name: "Pc1", Type: devicemanager.DeviceTypeComputer, IsActive: true}
+	var outPc devicemanager.Device
+	if err := c.Call(opCreate, pc, &outPc); err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
-	if err := m.DeactivateDevice("tenant-A", pc.Id); err != nil {
+
+	opUpdate := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Update}
+	if err := c.Call(opUpdate, map[string]interface{}{"id": outPc.Id, "is_active": false}, nil); err != nil {
 		t.Fatalf("DeactivateDevice: %v", err)
 	}
 
-	servers, err := m.ListDevices("tenant-A", devicemanager.DeviceFilter{Type: devicemanager.DeviceTypeServer, Limit: int64(view.Cap(0))})
-	if err != nil {
+	opRead := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Read}
+	var servers devicemanager.DeviceList
+	if err := c.Call(opRead, map[string]interface{}{"type": devicemanager.DeviceTypeServer}, &servers); err != nil {
 		t.Fatalf("ListDevices: %v", err)
 	}
 	if len(servers) != 1 || servers[0].Type != devicemanager.DeviceTypeServer {
 		t.Fatalf("expected 1 server, got %+v", servers)
 	}
 
-	active, err := m.ListDevices("tenant-A", devicemanager.DeviceFilter{ActiveOnly: true, Limit: int64(view.Cap(0))})
-	if err != nil {
+	var active devicemanager.DeviceList
+	if err := c.Call(opRead, map[string]interface{}{"active_only": true}, &active); err != nil {
 		t.Fatalf("ListDevices: %v", err)
 	}
-	if len(active) != 1 || active[0].Id != servers[0].Id {
+	if len(active) != 1 || active[0].Id != outSrv.Id {
 		t.Fatalf("expected only the still-active server, got %+v", active)
 	}
 }
@@ -157,26 +220,27 @@ func TestListDevices_FilterByTypeAndActive(t *testing.T) {
 func TestCreateDevice_PublishesEvent(t *testing.T) {
 	db := orm.New(mem.New())
 	pub := &mockPublisher{}
-	m, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, Publisher: pub, TenantID: "tenant-A"})
-	if err != nil {
-		t.Fatalf("New: %v", err)
-	}
-	d, err := m.CreateDevice(devicemanager.Device{TenantId: "tenant-A", Name: "Device X", Type: devicemanager.DeviceTypeOther, IsActive: true})
-	if err != nil {
+	m, _ := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, Publisher: pub, TenantID: "tenant-A"})
+	c := crud.LoopbackActingAs(pub, "u1", m)
+
+	opCreate := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
+	d := &devicemanager.Device{Name: "Device X", Type: devicemanager.DeviceTypeOther, IsActive: true}
+	var out devicemanager.Device
+	if err := c.Call(opCreate, d, &out); err != nil {
 		t.Fatalf("CreateDevice: %v", err)
 	}
 	if len(pub.Events) != 1 {
 		t.Fatalf("expected 1 published event, got %d", len(pub.Events))
 	}
 	event := pub.Events[0]
-	if event.Topic != devicemanager.TopicDeviceCreated {
-		t.Fatalf("expected topic %q, got %q", devicemanager.TopicDeviceCreated, event.Topic)
+	if event.Topic != "device_manager.device.created" {
+		t.Fatalf("expected topic %q, got %q", "device_manager.device.created", event.Topic)
 	}
-	payload, ok := event.Payload.(*devicemanager.Device)
+	payload, ok := event.Payload.(*crud.Change)
 	if !ok {
-		t.Fatalf("expected payload type *Device, got %T", event.Payload)
+		t.Fatalf("expected payload type *crud.Change, got %T", event.Payload)
 	}
-	if payload.Id != d.Id {
-		t.Fatalf("expected payload Id %q, got %q", d.Id, payload.Id)
+	if payload.Id != out.Id {
+		t.Fatalf("expected payload Id %q, got %q", out.Id, payload.Id)
 	}
 }

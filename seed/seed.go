@@ -4,6 +4,9 @@ import (
 	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/fmt"
 	"webtyp.com/network"
+	"webtyp.com/crud"
+	"webtyp.com/router"
+	"webtyp.com/model"
 )
 
 // Direcciones IP y MAC fijas de demostración (administradas globalmente, no aleatorias).
@@ -46,8 +49,14 @@ type Data struct {
 //
 // Ejemplo: data, err := seed.Load(dm, tenantID)
 func Load(m *devicemanager.Module, tenantID string) (Data, error) {
-	zone, err := m.SaveZone(devicemanager.Zone{TenantId: tenantID, Name: zoneName,
-		RangeStart: zoneRangeStart, RangeEnd: zoneRangeEnd})
+	c := crud.LoopbackActingAs(nil, "importer", m)
+	opCreateZone := router.Operation{Module: devicemanager.ModelName, Entity: "zone", Action: model.Create}
+	var zone devicemanager.Zone
+	zData := devicemanager.Zone{TenantId: tenantID, Name: zoneName,
+		RangeStart: zoneRangeStart, RangeEnd: zoneRangeEnd}
+	var zErr error
+	c.Call(opCreateZone, &crud.CreateArgs{Records: []model.Model{&zData}}, nil, func(err error) { zErr = err })
+	err := zErr
 	if err != nil {
 		return Data{}, fmt.Err(errSeedSaveZone, zoneName, err)
 	}
@@ -65,16 +74,26 @@ func Load(m *devicemanager.Module, tenantID string) (Data, error) {
 			Location: "Recepción", ZoneId: zone.Id, Access: network.AccessLocalName, IsActive: true}, PrinterMAC, PrinterIP},
 	}
 	for _, d := range demo {
-		created, err := m.CreateDevice(d.device)
+		createopCreateDev := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
+		var dErr error
+		dData := d.device
+		c.Call(opCreateDev, &crud.CreateArgs{Records: []model.Model{&dData}}, nil, func(err error) { dErr = err })
+		err = dErr
+		d := dData
 		if err != nil {
 			return Data{}, fmt.Err(errSeedCreateDevice, d.device.Name, err)
 		}
-		ni, err := m.SaveNetworkInterface(devicemanager.NetworkInterface{TenantId: tenantID,
-			DeviceId: created.Id, Label: ethernetLabel, Mac: d.mac, Ip: d.ip})
+		opCreateNi := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Create}
+		var niErr error
+		niData := devicemanager.NetworkInterface{TenantId: tenantID,
+			DeviceId: d.Id, Label: ethernetLabel, Mac: d.mac, Ip: d.ip}
+		c.Call(opCreateNi, &crud.CreateArgs{Records: []model.Model{&niData}}, nil, func(err error) { niErr = err })
+		err = niErr
+		ni := niData
 		if err != nil {
 			return Data{}, fmt.Err(errSeedSaveNetworkInterface, d.device.Name, d.ip, err)
 		}
-		res.Devices = append(res.Devices, created)
+		res.Devices = append(res.Devices, d)
 		res.Interfaces = append(res.Interfaces, ni)
 	}
 	return res, nil

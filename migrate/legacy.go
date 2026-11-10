@@ -31,5 +31,6 @@ END $$;`
 //
 // Ejemplo: if err := migrate.LegacyDeviceIP(conn, compiler); err != nil { return err }
 func LegacyDeviceIP(conn ddl.Execer, _ ddl.Compiler) error {
-	return conn.Exec(legacyDeviceIPSQL)
+	_, err := conn.Exec(legacyDeviceIPSQL)
+	return err
 }

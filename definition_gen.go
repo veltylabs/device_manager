@@ -5,6 +5,7 @@ package devicemanager
 import (
 	"webtyp.com/model"
 	"webtyp.com/orm"
+	"webtyp.com/crud"
 	"webtyp.com/time"
 )
 
@@ -64,6 +65,9 @@ func (s *DeviceList) DecodeFields(_ model.FieldReader) {}
 func (m *Device) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
+
+func (*Device) Allow() model.Action     { return DeviceModel.Allow }
+func (*DeviceList) Allow() model.Action { return DeviceModel.Allow }
 
 func (m *Device) Item() model.Item {
 	return model.Item{ID: m.Id, Label: m.Name, Description: model.JoinItem(m.Location, m.Access)}
@@ -156,6 +160,9 @@ func (m *Zone) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*Zone) Allow() model.Action     { return ZoneModel.Allow }
+func (*ZoneList) Allow() model.Action { return ZoneModel.Allow }
+
 func (m *Zone) Item() model.Item {
 	return model.Item{ID: m.Id, Label: m.Name, Description: model.JoinItem(m.RangeStart, m.RangeEnd)}
 }
@@ -244,6 +251,9 @@ func (m *NetworkInterface) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
+func (*NetworkInterface) Allow() model.Action     { return NetworkInterfaceModel.Allow }
+func (*NetworkInterfaceList) Allow() model.Action { return NetworkInterfaceModel.Allow }
+
 func (m *NetworkInterface) Item() model.Item {
 	return model.Item{ID: m.Id, Label: m.Label, Description: model.JoinItem(m.Mac, m.Ip)}
 }
@@ -289,53 +299,13 @@ func (m *NetworkInterface) SchemaExt() []model.FieldExt {
 	}
 }
 
-type ListDevicesArgs struct {
-	Type string
-	ActiveOnly bool
-	Limit int64
-	Offset int64
-}
-
-func (m *ListDevicesArgs) ModelName() string { return "list_devices_args" }
-
-func (m *ListDevicesArgs) Schema() []model.Field { return ListDevicesArgsModel.Fields }
-
-func (m *ListDevicesArgs) Pointers() []any { return []any{&m.Type, &m.ActiveOnly, &m.Limit, &m.Offset} }
-
-func (m *ListDevicesArgs) IsNil() bool { return m == nil }
-
-func (m *ListDevicesArgs) EncodeFields(w model.FieldWriter) {
-	w.String("type", m.Type)
-	w.Bool("active_only", m.ActiveOnly)
-	w.Int("limit", m.Limit)
-	w.Int("offset", m.Offset)
-}
-
-func (m *ListDevicesArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("type"); ok { m.Type = v }
-	if v, ok := r.Bool("active_only"); ok { m.ActiveOnly = v }
-	if v, ok := r.Int("limit"); ok { m.Limit = v }
-	if v, ok := r.Int("offset"); ok { m.Offset = v }
-}
-
-type ListDevicesArgsList []*ListDevicesArgs
-
-func (s *ListDevicesArgsList) Len() int             { return len(*s) }
-func (s *ListDevicesArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *ListDevicesArgsList) Append() model.Fielder  { v := &ListDevicesArgs{}; *s = append(*s, v); return v }
-func (s *ListDevicesArgsList) IsNil() bool          { return s == nil }
-func (s *ListDevicesArgsList) EncodeFields(_ model.FieldWriter) {}
-func (s *ListDevicesArgsList) DecodeFields(_ model.FieldReader) {}
-
-func (m *ListDevicesArgs) Validate(action byte) error {
-	return model.ValidateFields(action, m)
-}
-
 type GetDeviceArgs struct {
 	Id string
 }
 
 func (m *GetDeviceArgs) ModelName() string { return "get_device_args" }
+
+func (m *GetDeviceArgs) Wire() bool { return true }
 
 func (m *GetDeviceArgs) Schema() []model.Field { return GetDeviceArgsModel.Fields }
 
@@ -364,99 +334,56 @@ func (m *GetDeviceArgs) Validate(action byte) error {
 	return model.ValidateFields(action, m)
 }
 
-type DeactivateDeviceArgs struct {
-	Id string
+// ModelName is the module identity: Definition.Name.
+const ModelName = "device_manager"
+
+func (m *Module) ModelName() string { return ModelName }
+
+// Definition is the module's declaration (definition.go); crud.Mount compares it with what MountOperations mounted.
+func (m *Module) Definition() model.ModuleDefinition { return Definition }
+
+// MountOperations offers every entity of the module: the actions its model allows, with crud's validation and the rules written in rule_*.go.
+func (m *Module) MountOperations(reg crud.Registry) {
+	reg.AddStoredEntity(crud.StoredEntity{
+		Model: &Device{},
+		NewList: func() model.ModelSlice { return &DeviceList{} },
+		Store: m.StoreDevice(),
+		Rules: DeviceModel.Rules,
+		MFA: DeviceModel.MFA,
+		Create: func(a crud.CurrentUser, tx crud.Tx, rec model.Model) (crud.RuleAnswer, error) {
+			return rec.(*Device).Create(a, tx, m)
+		},
+		Update: func(a crud.CurrentUser, tx crud.Tx, old, next model.Model, fields []string) (crud.RuleAnswer, error) {
+			return next.(*Device).Update(a, tx, old.(*Device), fields, m)
+		},
+	})
+	reg.AddStoredEntity(crud.StoredEntity{
+		Model: &Zone{},
+		NewList: func() model.ModelSlice { return &ZoneList{} },
+		Store: m.StoreZone(),
+		Rules: ZoneModel.Rules,
+		MFA: ZoneModel.MFA,
+		Create: func(a crud.CurrentUser, tx crud.Tx, rec model.Model) (crud.RuleAnswer, error) {
+			return rec.(*Zone).Create(a, tx, m)
+		},
+		Update: func(a crud.CurrentUser, tx crud.Tx, old, next model.Model, fields []string) (crud.RuleAnswer, error) {
+			return next.(*Zone).Update(a, tx, old.(*Zone), fields, m)
+		},
+		Delete: func(a crud.CurrentUser, tx crud.Tx, rec model.Model) (crud.RuleAnswer, error) {
+			return rec.(*Zone).Delete(a, tx, m)
+		},
+	})
+	reg.AddStoredEntity(crud.StoredEntity{
+		Model: &NetworkInterface{},
+		NewList: func() model.ModelSlice { return &NetworkInterfaceList{} },
+		Store: m.StoreNetworkInterface(),
+		Rules: NetworkInterfaceModel.Rules,
+		MFA: NetworkInterfaceModel.MFA,
+		Create: func(a crud.CurrentUser, tx crud.Tx, rec model.Model) (crud.RuleAnswer, error) {
+			return rec.(*NetworkInterface).Create(a, tx, m)
+		},
+		Update: func(a crud.CurrentUser, tx crud.Tx, old, next model.Model, fields []string) (crud.RuleAnswer, error) {
+			return next.(*NetworkInterface).Update(a, tx, old.(*NetworkInterface), fields, m)
+		},
+	})
 }
-
-func (m *DeactivateDeviceArgs) ModelName() string { return "deactivate_device_args" }
-
-func (m *DeactivateDeviceArgs) Schema() []model.Field { return DeactivateDeviceArgsModel.Fields }
-
-func (m *DeactivateDeviceArgs) Pointers() []any { return []any{&m.Id} }
-
-func (m *DeactivateDeviceArgs) IsNil() bool { return m == nil }
-
-func (m *DeactivateDeviceArgs) EncodeFields(w model.FieldWriter) {
-	w.String("id", m.Id)
-}
-
-func (m *DeactivateDeviceArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("id"); ok { m.Id = v }
-}
-
-type DeactivateDeviceArgsList []*DeactivateDeviceArgs
-
-func (s *DeactivateDeviceArgsList) Len() int             { return len(*s) }
-func (s *DeactivateDeviceArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *DeactivateDeviceArgsList) Append() model.Fielder  { v := &DeactivateDeviceArgs{}; *s = append(*s, v); return v }
-func (s *DeactivateDeviceArgsList) IsNil() bool          { return s == nil }
-func (s *DeactivateDeviceArgsList) EncodeFields(_ model.FieldWriter) {}
-func (s *DeactivateDeviceArgsList) DecodeFields(_ model.FieldReader) {}
-
-func (m *DeactivateDeviceArgs) Validate(action byte) error {
-	return model.ValidateFields(action, m)
-}
-
-type ListZonesArgs struct {
-}
-
-func (m *ListZonesArgs) ModelName() string { return "list_zones_args" }
-
-func (m *ListZonesArgs) Schema() []model.Field { return ListZonesArgsModel.Fields }
-
-func (m *ListZonesArgs) Pointers() []any { return []any{} }
-
-func (m *ListZonesArgs) IsNil() bool { return m == nil }
-
-func (m *ListZonesArgs) EncodeFields(w model.FieldWriter) {
-}
-
-func (m *ListZonesArgs) DecodeFields(r model.FieldReader) {
-}
-
-type ListZonesArgsList []*ListZonesArgs
-
-func (s *ListZonesArgsList) Len() int             { return len(*s) }
-func (s *ListZonesArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *ListZonesArgsList) Append() model.Fielder  { v := &ListZonesArgs{}; *s = append(*s, v); return v }
-func (s *ListZonesArgsList) IsNil() bool          { return s == nil }
-func (s *ListZonesArgsList) EncodeFields(_ model.FieldWriter) {}
-func (s *ListZonesArgsList) DecodeFields(_ model.FieldReader) {}
-
-func (m *ListZonesArgs) Validate(action byte) error {
-	return model.ValidateFields(action, m)
-}
-
-type ListNetworkInterfacesArgs struct {
-	DeviceId string
-}
-
-func (m *ListNetworkInterfacesArgs) ModelName() string { return "list_network_interfaces_args" }
-
-func (m *ListNetworkInterfacesArgs) Schema() []model.Field { return ListNetworkInterfacesArgsModel.Fields }
-
-func (m *ListNetworkInterfacesArgs) Pointers() []any { return []any{&m.DeviceId} }
-
-func (m *ListNetworkInterfacesArgs) IsNil() bool { return m == nil }
-
-func (m *ListNetworkInterfacesArgs) EncodeFields(w model.FieldWriter) {
-	w.String("device_id", m.DeviceId)
-}
-
-func (m *ListNetworkInterfacesArgs) DecodeFields(r model.FieldReader) {
-	if v, ok := r.String("device_id"); ok { m.DeviceId = v }
-}
-
-type ListNetworkInterfacesArgsList []*ListNetworkInterfacesArgs
-
-func (s *ListNetworkInterfacesArgsList) Len() int             { return len(*s) }
-func (s *ListNetworkInterfacesArgsList) At(i int) model.Fielder { return (*s)[i] }
-func (s *ListNetworkInterfacesArgsList) Append() model.Fielder  { v := &ListNetworkInterfacesArgs{}; *s = append(*s, v); return v }
-func (s *ListNetworkInterfacesArgsList) IsNil() bool          { return s == nil }
-func (s *ListNetworkInterfacesArgsList) EncodeFields(_ model.FieldWriter) {}
-func (s *ListNetworkInterfacesArgsList) DecodeFields(_ model.FieldReader) {}
-
-func (m *ListNetworkInterfacesArgs) Validate(action byte) error {
-	return model.ValidateFields(action, m)
-}
-

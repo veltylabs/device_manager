@@ -35,10 +35,12 @@ func namePermitted(max int) model.Permitted {
 //
 // Ejemplo: def := devicemanager.DeviceModel
 var DeviceModel = model.Definition{
+	Allow: model.Create | model.Read | model.Update | model.Delete,
+	Rules: model.Rules{Create: model.AddMyBusinessRule, Update: model.AddMyBusinessRule, Delete: model.HaveNoBusinessRule, Read: model.HaveNoBusinessRule},
 	Name: "device",
 	Fields: model.Fields{
-		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, OmitEmpty: true},
-		{Name: "tenant_id", Type: model.Text(), NotNull: true},
+		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, ServerOnly: true, OmitEmpty: true},
+		{Name: "tenant_id", Type: model.Text(), NotNull: true, ServerOnly: true},
 		{Name: "name", Type: input.Text(), Label: "Name", NotNull: true, Permitted: namePermitted(255), Item: model.ItemLabel},
 		{Name: "type", Type: kinds.DeviceType(), Label: "Type", NotNull: true},
 		{Name: "location", Type: input.Text(), Label: "Location", OmitEmpty: true, Permitted: model.Permitted{Maximum: 255}, Item: model.ItemDescription},
@@ -47,7 +49,7 @@ var DeviceModel = model.Definition{
 		{Name: "zone_id", Type: input.Select(), Label: "Zone", OmitEmpty: true, Options: &ZoneModel},
 		{Name: "access", Type: kinds.DeviceAccess(), Label: "Access", NotNull: true, Item: model.ItemDescription},
 		{Name: "is_active", Type: input.Checkbox(), Label: "Active", NotNull: true},
-		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true},
+		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true, ServerOnly: true},
 	},
 }
 
@@ -55,14 +57,16 @@ var DeviceModel = model.Definition{
 //
 // Ejemplo: def := devicemanager.ZoneModel
 var ZoneModel = model.Definition{
+	Allow: model.Create | model.Read | model.Update | model.Delete,
+	Rules: model.Rules{Create: model.AddMyBusinessRule, Update: model.AddMyBusinessRule, Delete: model.AddMyBusinessRule, Read: model.HaveNoBusinessRule},
 	Name: "zone",
 	Fields: model.Fields{
-		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, OmitEmpty: true},
-		{Name: "tenant_id", Type: model.Text(), NotNull: true},
+		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, ServerOnly: true, OmitEmpty: true},
+		{Name: "tenant_id", Type: model.Text(), NotNull: true, ServerOnly: true},
 		{Name: "name", Type: input.Text(), Label: "Name", NotNull: true, Permitted: namePermitted(64), Item: model.ItemLabel},
 		{Name: "range_start", Type: input.IP(), Label: "Range start", NotNull: true, Item: model.ItemDescription},
 		{Name: "range_end", Type: input.IP(), Label: "Range end", NotNull: true, Item: model.ItemDescription},
-		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true},
+		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true, ServerOnly: true},
 	},
 }
 
@@ -71,72 +75,37 @@ var ZoneModel = model.Definition{
 //
 // Ejemplo: def := devicemanager.NetworkInterfaceModel
 var NetworkInterfaceModel = model.Definition{
+	Allow: model.Create | model.Read | model.Update | model.Delete,
+	Rules: model.Rules{Create: model.AddMyBusinessRule, Update: model.AddMyBusinessRule, Delete: model.HaveNoBusinessRule, Read: model.HaveNoBusinessRule},
 	Name: "network_interface",
 	Fields: model.Fields{
-		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, OmitEmpty: true},
-		{Name: "tenant_id", Type: model.Text(), NotNull: true},
+		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, ServerOnly: true, OmitEmpty: true},
+		{Name: "tenant_id", Type: model.Text(), NotNull: true, ServerOnly: true},
 		{Name: "device_id", Type: input.Select(), Label: "Device", NotNull: true, Ref: &DeviceModel, DB: &model.FieldDB{RefColumn: "id"}},
 		{Name: "label", Type: input.Text(), Label: "Label", NotNull: true, Permitted: model.Permitted{Minimum: 1, Maximum: 32}, Item: model.ItemLabel},
 		{Name: "mac", Type: input.MAC(), Label: "MAC address", OmitEmpty: true, Item: model.ItemDescription},
 		{Name: "ip", Type: input.IP(), Label: "IP address", OmitEmpty: true, Item: model.ItemDescription},
-		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true},
+		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true, ServerOnly: true},
 	},
 }
 
 // Modelos de solo transporte (Field.DB es nil en cada campo) — argumentos de las operaciones en ops.go.
 
 // ListDevicesArgsModel define los argumentos para listar equipos.
-//
-// Ejemplo: def := devicemanager.ListDevicesArgsModel
-var ListDevicesArgsModel = model.Definition{
-	Name: "list_devices_args",
-	Fields: model.Fields{
-		{Name: "type", Type: model.Text()},
-		{Name: "active_only", Type: model.Bool()},
-		{Name: "limit", Type: model.Int()},
-		{Name: "offset", Type: model.Int()},
-	},
-}
-
 // GetDeviceArgsModel define los argumentos para obtener un equipo por ID.
 //
 // Ejemplo: def := devicemanager.GetDeviceArgsModel
 var GetDeviceArgsModel = model.Definition{
+	Wire: true,
 	Name: "get_device_args",
 	Fields: model.Fields{
-		{Name: "id", Type: model.Text()},
+		{Name: "id", Type: model.Text(), ServerOnly: true},
 	},
 }
 
 // DeactivateDeviceArgsModel define los argumentos para desactivar un equipo.
-//
-// Ejemplo: def := devicemanager.DeactivateDeviceArgsModel
-var DeactivateDeviceArgsModel = model.Definition{
-	Name: "deactivate_device_args",
-	Fields: model.Fields{
-		{Name: "id", Type: model.Text()},
-	},
-}
-
 // ListZonesArgsModel define los argumentos para listar zonas.
-//
-// Ejemplo: def := devicemanager.ListZonesArgsModel
-var ListZonesArgsModel = model.Definition{
-	Name: "list_zones_args",
-	Fields: model.Fields{
-	},
-}
-
 // ListNetworkInterfacesArgsModel define los argumentos para listar interfaces de red.
-//
-// Ejemplo: def := devicemanager.ListNetworkInterfacesArgsModel
-var ListNetworkInterfacesArgsModel = model.Definition{
-	Name: "list_network_interfaces_args",
-	Fields: model.Fields{
-		{Name: "device_id", Type: model.Text()},
-	},
-}
-
 // ImportedInterfaceLabel es la etiqueta de la interfaz creada al importar hosts.
 //
 // Ejemplo: ni.Label = devicemanager.ImportedInterfaceLabel
@@ -146,32 +115,28 @@ const ImportedInterfaceLabel = "imported"
 //
 // Ejemplo: if model.KindOf(err) == model.ErrorNotFound { ... }
 const (
-	ErrNotFound          model.NotFound = "device not found"
-	ErrIPAlreadyExists   model.Conflict = "device ip already exists"
-	ErrMACAlreadyExists  model.Conflict = "network interface mac already exists"
-	ErrRandomizedMAC     model.Invalid  = "randomized MAC address: on the device, turn off random (private) hardware addresses for this Wi-Fi network and register its real MAC"
-	ErrNoZone            model.Invalid  = "ip is empty and the device has no zone to assign one from"
-	ErrIPOutsideZone     model.Invalid  = "ip is outside the device's zone range"
-	ErrZoneFull          model.Conflict = "zone has no free ip"
-	ErrZoneOverlap       model.Conflict = "zone range overlaps another zone"
-	ErrZoneInUse         model.Conflict = "zone is used by a device"
-	ErrZoneNotFound      model.NotFound = "zone not found"
+	ErrNotFound          model.NotFound = "device no encontrado"
+	ErrIPAlreadyExists   model.Conflict = "ip duplicada"
+	ErrMACAlreadyExists  model.Conflict = "mac duplicada"
+	ErrRandomizedMAC     model.Invalid  = "dirección MAC aleatoria: apaga las direcciones privadas"
+	ErrNoZone            model.Invalid  = "ip vacía y sin zona"
+	ErrIPOutsideZone     model.Invalid  = "ip fuera de rango de zona"
+	ErrZoneFull          model.Conflict = "zona sin ip libre"
+	ErrZoneOverlap       model.Conflict = "rango solapado"
+	ErrZoneInUse         model.Conflict = "zona en uso"
+	ErrZoneNotFound      model.NotFound = "zona no encontrada"
 	ErrInterfaceNotFound model.NotFound = "network interface not found"
-	ErrInvalidZoneRange  model.Invalid  = "zone range must be two IPv4 addresses with start <= end"
-	ErrCannotRead        model.Invalid  = "device_manager: cannot read the request"
+	ErrInvalidZoneRange  model.Invalid  = "rango inválido"
 )
 
-// Tópicos de eventos publicados por el módulo. El tenant_id viaja en el payload del evento, nunca en el tópico.
-//
-// Ejemplo: topico := devicemanager.TopicDeviceCreated
-const (
-	TopicDeviceCreated     = "device_manager.device.created"
-	TopicDeviceUpdated     = "device_manager.device.updated"
-	TopicDeviceDeactivated = "device_manager.device.deactivated"
-	TopicDeviceDeleted     = "device_manager.device.deleted"
 
-	TopicZoneSaved               = "device_manager.zone.saved"
-	TopicZoneDeleted             = "device_manager.zone.deleted"
-	TopicNetworkInterfaceSaved   = "device_manager.network_interface.saved"
-	TopicNetworkInterfaceDeleted = "device_manager.network_interface.deleted"
-)
+
+var Definition = model.ModuleDefinition{
+	Name: "device_manager",
+	Entities: []model.Definition{
+		DeviceModel,
+		ZoneModel,
+		NetworkInterfaceModel,
+		GetDeviceArgsModel,
+	},
+}

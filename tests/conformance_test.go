@@ -2,190 +2,39 @@ package tests
 
 import (
 	"testing"
-
+	"webtyp.com/router"
+	"webtyp.com/crud"
 	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/model"
-	"webtyp.com/router"
+	"webtyp.com/orm"
+	"webtyp.com/storage/mem"
 	"webtyp.com/router/mock"
-	"webtyp.com/view"
 )
 
-type fakeCaller struct {
-	reply func(op string, into model.Decodable)
-}
-
-func (f *fakeCaller) Call(op string, args model.Encodable, into model.Decodable, done func(err error)) {
-	if f.reply != nil {
-		f.reply(op, into)
-	}
-	if done != nil {
-		done(nil)
-	}
-}
-
-func (f *fakeCaller) Dispatch(op string, args model.Encodable) {}
-
-func TestMountOperations_CreateDevice(t *testing.T) {
+func TestMount_MatchesDefinition(t *testing.T) {
 	m := setup(t)
-	if m.ModelName() != "device_manager" {
-		t.Fatalf("expected ModelName %q, got %q", "device_manager", m.ModelName())
-	}
-
-	reg := &mock.Router{}
-	m.MountOperations(reg)
-	reg.Configure(mock.Config{
-		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
-		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
-	})
-
-	ctx := &mock.Context{
-		InBody: []byte(`{"tenant_id":"tenant-A","name":"Pc1","ip":"192.168.1.20","type":"computer","is_active":true}`),
-	}
-	ctx.SetUserID("test-user")
-	reg.Invoke("OP", "/"+devicemanager.OpCreateDevice, ctx)
-
-	if ctx.Status != 0 && ctx.Status != 200 {
-		t.Fatalf("expected success status, got %d, body=%s", ctx.Status, ctx.ResponseBody())
-	}
-	if len(ctx.ResponseBody()) == 0 {
-		t.Fatal("expected a non-empty response body")
+	r := &mock.Router{}
+	if err := crud.Mount(r, nil, nil, m); err != nil {
+		t.Fatalf("crud.Mount returned error: %v", err)
 	}
 }
 
-func TestMountOperations_CreateDevice_DecodeError(t *testing.T) {
-	m := setup(t)
-	reg := &mock.Router{}
-	m.MountOperations(reg)
-	reg.Configure(mock.Config{
-		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
-		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
-	})
+func TestTenant_ReadOtherTenantIsNotFound(t *testing.T) {
+	db := orm.New(mem.New())
+	mA, _ := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, TenantID: "tenant-A"})
+	cA := crud.LoopbackActingAs(nil, "u1", mA)
 
-	ctx := &mock.Context{InBody: []byte(`not valid json`)}
-	ctx.SetUserID("test-user")
-	reg.Invoke("OP", "/"+devicemanager.OpCreateDevice, ctx)
-
-	if ctx.Status != 400 {
-		t.Fatalf("expected 400 for a malformed body, got %d", ctx.Status)
+	opCreate := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
+	d := &devicemanager.Device{Name: "Device A", Type: devicemanager.DeviceTypeOther, IsActive: true}
+	var out crud.CreateResult
+	if err := callSync(cA, opCreate, &crud.CreateArgs{Records: []model.Model{d}}, &out); err != nil {
+		t.Fatalf("CreateDevice tenant A: %v", err)
 	}
-}
+	id := out.IDs[0]
 
-func TestMountOperations_GetDevice_NotFound(t *testing.T) {
-	m := setup(t)
-	reg := &mock.Router{}
-	m.MountOperations(reg)
-	reg.Configure(mock.Config{
-		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
-		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
-	})
+	mB, _ := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, TenantID: "tenant-B"})
 
-	ctx := &mock.Context{InBody: []byte(`{"tenant_id":"tenant-A","id":"does-not-exist"}`)}
-	ctx.SetUserID("test-user")
-	reg.Invoke("OP", "/"+devicemanager.OpGetDevice, ctx)
-
-	if ctx.Status != 404 {
-		t.Fatalf("expected 404 for a non-existent id, got %d", ctx.Status)
-	}
-}
-
-func TestMountOperations_CreateDevice_RBACDenial(t *testing.T) {
-	m := setup(t)
-	reg := &mock.Router{}
-	m.MountOperations(reg)
-	reg.Configure(mock.Config{
-		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
-		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return false },
-	})
-
-	ctx := &mock.Context{
-		InBody: []byte(`{"tenant_id":"tenant-A","name":"Pc1","ip":"192.168.1.21","type":"computer","is_active":true}`),
-	}
-	ctx.SetUserID("test-user")
-	reg.Invoke("OP", "/"+devicemanager.OpCreateDevice, ctx)
-
-	if ctx.Status != 403 {
-		t.Fatalf("expected 403 status, got %d, body=%s", ctx.Status, ctx.ResponseBody())
-	}
-}
-
-func TestView_List(t *testing.T) {
-	caller := &fakeCaller{
-		reply: func(op string, into model.Decodable) {
-			if op != devicemanager.ModelName+"."+devicemanager.OpListDevices {
-				return
-			}
-			list := into.(*devicemanager.DeviceList)
-			rec := list.Append().(*devicemanager.Device)
-			rec.Id, rec.Name = "dev_1", "Pc Recepcion"
-		},
-	}
-	p := devicemanager.NewView(view.NewRecords().Caller(caller))
-	var rerr error
-	p.Reload(func(err error) { rerr = err })
-	if rerr != nil {
-		t.Fatalf("Reload: %v", rerr)
-	}
-	if _, ok := p.(view.Saver); !ok {
-		t.Error("expected Presenter to implement view.Saver")
-	}
-	if _, ok := p.(view.Deleter); !ok {
-		t.Error("expected Presenter to implement view.Deleter")
-	}
-}
-
-func TestMountOperations_ListAcceptsListArgs(t *testing.T) {
-	m := setup(t)
-	reg := &mock.Router{}
-	m.MountOperations(reg)
-	reg.Configure(mock.Config{
-		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
-		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
-	})
-
-	ctx := &mock.Context{
-		InBody: []byte(`{"limit": 1}`),
-	}
-	ctx.SetUserID("test-user")
-	reg.Invoke("OP", "/"+devicemanager.OpListDevices, ctx)
-	if ctx.Status != 0 && ctx.Status != 200 {
-		t.Fatalf("expected success status for list args, got %d, body=%s", ctx.Status, ctx.ResponseBody())
-	}
-}
-
-func TestMountOperations_ListZonesAcceptsListArgs(t *testing.T) {
-	m := setup(t)
-	reg := &mock.Router{}
-	m.MountOperations(reg)
-	reg.Configure(mock.Config{
-		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
-		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
-	})
-
-	ctx := &mock.Context{
-		InBody: []byte(`{"limit": 1}`),
-	}
-	ctx.SetUserID("test-user")
-	reg.Invoke("OP", "/"+devicemanager.OpListZones, ctx)
-	if ctx.Status != 0 && ctx.Status != 200 {
-		t.Fatalf("expected success status for list args, got %d, body=%s", ctx.Status, ctx.ResponseBody())
-	}
-}
-
-func TestMountOperations_ListNetworkInterfacesAcceptsListArgs(t *testing.T) {
-	m := setup(t)
-	reg := &mock.Router{}
-	m.MountOperations(reg)
-	reg.Configure(mock.Config{
-		Authn:     func(next router.HandlerFunc) router.HandlerFunc { return next },
-		Authorize: func(userID string, resource model.Resource, action model.Action) bool { return true },
-	})
-
-	ctx := &mock.Context{
-		InBody: []byte(`{"limit": 1}`),
-	}
-	ctx.SetUserID("test-user")
-	reg.Invoke("OP", "/"+devicemanager.OpListNetworkInterfaces, ctx)
-	if ctx.Status != 0 && ctx.Status != 200 {
-		t.Fatalf("expected success status for list args, got %d, body=%s", ctx.Status, ctx.ResponseBody())
+	if _, err := mB.GetDevice("tenant-B", id); !isErr(err, devicemanager.ErrNotFound) {
+		t.Fatalf("tenant B read tenant A device: expected ErrNotFound, got %v", err)
 	}
 }

@@ -2,6 +2,8 @@ package tests
 
 import (
 	"testing"
+	"webtyp.com/crud"
+	"webtyp.com/router"
 
 	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/form"

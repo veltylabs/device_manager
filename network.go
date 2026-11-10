@@ -4,6 +4,8 @@ import (
 	"webtyp.com/input"
 	"webtyp.com/model"
 	"webtyp.com/network"
+	"webtyp.com/router"
+	"webtyp.com/crud"
 )
 
 // Motivos que ImportHosts entrega para una entrada descubierta que no importa.
@@ -79,6 +81,12 @@ func (n NetworkHosts) ImportHosts(found []network.Discovered) (network.ImportRes
 	if err != nil {
 		return res, err
 	}
+
+	c := crud.LoopbackActingAs(n.Devices.pub, "importer", n.Devices)
+	opCreateDev := router.Operation{Module: ModelName, Entity: "device", Action: model.Create}
+	opCreateNi := router.Operation{Module: ModelName, Entity: "network_interface", Action: model.Create}
+	opDelDev := router.Operation{Module: ModelName, Entity: "device", Action: model.Delete}
+
 	for _, f := range found {
 		skip := func(reason string) { res.Skipped = append(res.Skipped, network.Skipped{Found: f, Reason: reason}) }
 		if f.MAC == "" {
@@ -115,36 +123,38 @@ func (n NetworkHosts) ImportHosts(found []network.Discovered) (network.ImportRes
 		if z, ok := zoneContaining(zones, f.IP); ok {
 			zoneID = z.Id
 		}
-		dev, err := n.Devices.CreateDevice(Device{TenantId: n.TenantID, Name: name, Type: DeviceTypeOther,
-			Access: access, ZoneId: zoneID, IsActive: true})
-		if err != nil {
-			if model.KindOf(err) == model.ErrorInvalid {
-				skip(err.Error())
+
+		dev := &Device{Name: name, Type: DeviceTypeOther, Access: access, ZoneId: zoneID, IsActive: true}
+		var errDev error
+		c.Call(opCreateDev, &crud.CreateArgs{Records: []model.Model{dev}}, nil, func(e error) { errDev = e })
+		if errDev != nil {
+			if model.KindOf(errDev) == model.ErrorInvalid {
+				skip(errDev.Error())
 				continue
 			}
-			return res, err
+			return res, errDev
 		}
-		_, err = n.Devices.SaveNetworkInterface(NetworkInterface{TenantId: n.TenantID, DeviceId: dev.Id,
-			Label: ImportedInterfaceLabel, Mac: mac, Ip: f.IP})
-		if err != nil {
-			// El equipo no debe quedar sin su interfaz.
-			if delErr := n.Devices.DeleteDevice(n.TenantID, dev.Id); delErr != nil {
-				return res, delErr
-			}
-			if model.KindOf(err) == model.ErrorInvalid {
-				skip(err.Error())
+
+		ni := &NetworkInterface{DeviceId: dev.Id, Label: ImportedInterfaceLabel, Mac: mac, Ip: f.IP}
+		var errNi error
+		c.Call(opCreateNi, &crud.CreateArgs{Records: []model.Model{ni}}, nil, func(e error) { errNi = e })
+		if errNi != nil {
+			c.Call(opDelDev, &crud.DeleteArgs{IDs: []string{dev.Id}}, nil, func(e error) {})
+			if model.KindOf(errNi) == model.ErrorInvalid {
+				skip(errNi.Error())
 				continue
 			}
-			if model.KindOf(err) == model.ErrorConflict {
-				skip(err.Error())
+			if model.KindOf(errNi) == model.ErrorConflict {
+				skip(errNi.Error())
 				continue
 			}
-			return res, err
+			return res, errNi
 		}
 		res.Created++
 	}
 	return res, nil
 }
+
 
 func (n NetworkHosts) macRegistered(mac string) (bool, error) {
 	var ni NetworkInterface

@@ -2,6 +2,8 @@ package tests
 
 import (
 	"testing"
+	"webtyp.com/crud"
+	"webtyp.com/router"
 
 	devicemanager "github.com/veltylabs/device_manager"
 	"webtyp.com/events"
@@ -44,11 +46,29 @@ const testIfaceLabel = "lan"
 
 // createWithIP crea d y le asigna una interfaz con ip — a lo que los tests
 // escritos antes de que existieran las interfaces se referían como "un equipo con IP".
-func createWithIP(m *devicemanager.Module, d devicemanager.Device, ip string) (devicemanager.Device, error) {
-	created, err := m.CreateDevice(d)
-	if err != nil {
+func createWithIP(c crud.Caller, d devicemanager.Device, ip string) (devicemanager.Device, error) {
+	opCreateDev := router.Operation{Module: devicemanager.ModelName, Entity: "device", Action: model.Create}
+	var created devicemanager.Device
+	if err := c.Call(opCreateDev, &d, &created); err != nil {
 		return devicemanager.Device{}, err
 	}
+
+	opCreateIface := router.Operation{Module: devicemanager.ModelName, Entity: "network_interface", Action: model.Create}
+	ni := devicemanager.NetworkInterface{DeviceId: created.Id, Label: testIfaceLabel, Ip: ip}
+	if err := c.Call(opCreateIface, &ni, nil); err != nil {
+		return devicemanager.Device{}, err
+	}
+
+	return created, nil
+}
 	_, err = m.SaveNetworkInterface(devicemanager.NetworkInterface{TenantId: d.TenantId, DeviceId: created.Id, Label: testIfaceLabel, Ip: ip})
 	return created, err
+}
+
+func callSync(c router.Caller, op router.Operation, args model.Encodable, into model.Decodable) error {
+	var callErr error
+	c.Call(op, args, into, func(err error) {
+		callErr = err
+	})
+	return callErr
 }
