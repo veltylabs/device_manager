@@ -16,7 +16,7 @@ require (
 	webtyp.com/network v0.1.1
 	webtyp.com/orm v0.12.31
 	webtyp.com/router v0.4.21
-	webtyp.com/storage v0.2.1
+	webtyp.com/storage v0.2.3
 	webtyp.com/svg v0.3.33
 	webtyp.com/time v0.6.4
 	webtyp.com/unixid v0.3.1
