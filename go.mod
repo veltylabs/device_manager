@@ -7,7 +7,7 @@ require (
 	webtyp.com/crud v0.0.12
 	webtyp.com/ddl v0.0.49
 	webtyp.com/events v0.1.8
-	webtyp.com/fmt v1.0.1
+	webtyp.com/fmt v1.0.2
 	webtyp.com/form v0.4.61
 	webtyp.com/icons v0.0.39
 	webtyp.com/input v0.2.0
