@@ -10,7 +10,7 @@ require (
 	webtyp.com/fmt v1.0.2
 	webtyp.com/form v0.4.61
 	webtyp.com/icons v0.0.39
-	webtyp.com/input v0.2.0
+	webtyp.com/input v0.2.4
 	webtyp.com/lang v0.1.16
 	webtyp.com/model v0.2.23
 	webtyp.com/network v0.1.1
@@ -42,6 +42,7 @@ require (
 	webtyp.com/calendar v0.1.0 // indirect
 	webtyp.com/color v0.1.2 // indirect
 	webtyp.com/context v0.0.23 // indirect
+	webtyp.com/country v0.0.2 // indirect
 	webtyp.com/css v0.4.31 // indirect
 	webtyp.com/dbus v0.1.1 // indirect
 	webtyp.com/definitioncheck v0.0.3 // indirect
