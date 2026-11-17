@@ -39,7 +39,7 @@ func Demo() (view.Demo, error) {
 		Modules:    []crud.Module{mod},
 		Migrations: []ddl.Step{{Name: devicemanager.ModelName, Run: migrate.Migrate}},
 		Screens: func(d view.BrowserDeps) []view.Screen {
-			return ui.Screens(d.Caller)
+			return ui.Screens(d)
 		},
 	}, nil
 }

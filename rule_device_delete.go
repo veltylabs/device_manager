@@ -15,14 +15,14 @@ func (p *Device) Delete(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAns
 			crud.Query{Conditions: []storage.Condition{storage.Eq(NetworkInterface_.DeviceId, p.Id)}, Limit: crud.MaxPage},
 			func(r model.Model) { ids = append(ids, r.(*NetworkInterface).Id) })
 		if err != nil {
-			return 0, err
+			return crud.RuleAnswer{}, err
 		}
 		if len(ids) == 0 {
-			return crud.ApplyAndPublish, nil
+			return crud.ApplyAndPublish(), nil
 		}
 		for _, id := range ids {
 			if err := tx.Delete(&NetworkInterface{}, id); err != nil {
-				return 0, err
+				return crud.RuleAnswer{}, err
 			}
 		}
 	}

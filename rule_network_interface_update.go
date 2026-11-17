@@ -28,13 +28,13 @@ func (next *NetworkInterface) Update(a crud.CurrentUser, tx crud.Tx, old *Networ
 
 	var dev Device
 	if err := tx.ReadOne(&dev, next.DeviceId); err != nil {
-		return 0, err
+		return crud.RuleAnswer{}, err
 	}
 
 	if next.Mac != "" {
 		next.Mac = input.CanonicalMAC(next.Mac)
 		if input.IsLocallyAdministeredMAC(next.Mac) {
-			return 0, &model.FieldError{Field: "mac", Err: ErrRandomizedMAC}
+			return crud.RuleAnswer{}, &model.FieldError{Field: "mac", Err: ErrRandomizedMAC}
 		}
 		var dupCount int
 		qDup := crud.Query{Conditions: []storage.Condition{
@@ -45,10 +45,10 @@ func (next *NetworkInterface) Update(a crud.CurrentUser, tx crud.Tx, old *Networ
 			dupCount++
 		})
 		if err != nil {
-			return 0, err
+			return crud.RuleAnswer{}, err
 		}
 		if dupCount > 0 {
-			return 0, ErrMACAlreadyExists
+			return crud.RuleAnswer{}, ErrMACAlreadyExists
 		}
 	}
 
@@ -58,24 +58,24 @@ func (next *NetworkInterface) Update(a crud.CurrentUser, tx crud.Tx, old *Networ
 		all = append(all, *row.(*NetworkInterface))
 	})
 	if err != nil {
-		return 0, err
+		return crud.RuleAnswer{}, err
 	}
 
 	var zone Zone
 	hasZone := dev.ZoneId != ""
 	if hasZone {
 		if err := tx.ReadOne(&zone, dev.ZoneId); err != nil {
-			return 0, err
+			return crud.RuleAnswer{}, err
 		}
 	}
 
 	if next.Ip == "" {
 		if !hasZone {
-			return 0, &model.FieldError{Field: "ip", Err: ErrNoZone}
+			return crud.RuleAnswer{}, &model.FieldError{Field: "ip", Err: ErrNoZone}
 		}
 		ip, ok := freeIP(zone, all, next.Id)
 		if !ok {
-			return 0, ErrZoneFull
+			return crud.RuleAnswer{}, ErrZoneFull
 		}
 		next.Ip = ip
 	} else {
@@ -84,16 +84,16 @@ func (next *NetworkInterface) Update(a crud.CurrentUser, tx crud.Tx, old *Networ
 			n, okIP := ipv4ToUint32(next.Ip)
 			s, e, okZone := zoneRange(zone)
 			if !okIP || !okZone || n < s || n > e {
-				return 0, &model.FieldError{Field: "ip", Err: ErrIPOutsideZone}
+				return crud.RuleAnswer{}, &model.FieldError{Field: "ip", Err: ErrIPOutsideZone}
 			}
 		}
 		for _, o := range all {
 			if o.Id != next.Id && o.Ip == next.Ip {
-				return 0, ErrIPAlreadyExists
+				return crud.RuleAnswer{}, ErrIPAlreadyExists
 			}
 		}
 	}
 
 	next.UpdatedAt = time.NowNano()
-	return crud.ApplyAndPublish, nil
+	return crud.ApplyAndPublish(), nil
 }

@@ -14,7 +14,7 @@ func (p *Zone) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswe
 	p.RangeEnd = input.CanonicalIP(p.RangeEnd)
 	start, end, ok := zoneRange(*p)
 	if !ok {
-		return 0, &model.FieldError{Field: "range_start", Err: ErrInvalidZoneRange}
+		return crud.RuleAnswer{}, &model.FieldError{Field: "range_start", Err: ErrInvalidZoneRange}
 	}
 
 	var others []Zone
@@ -23,7 +23,7 @@ func (p *Zone) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswe
 		others = append(others, *row.(*Zone))
 	})
 	if err != nil {
-		return 0, err
+		return crud.RuleAnswer{}, err
 	}
 
 	for _, o := range others {
@@ -32,11 +32,11 @@ func (p *Zone) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswe
 		}
 		os, oe, ok := zoneRange(o)
 		if ok && start <= oe && os <= end {
-			return 0, ErrZoneOverlap
+			return crud.RuleAnswer{}, ErrZoneOverlap
 		}
 	}
 
 	p.Id = m.ids.NewID()
 	p.UpdatedAt = time.NowNano()
-	return crud.ApplyAndPublish, nil
+	return crud.ApplyAndPublish(), nil
 }

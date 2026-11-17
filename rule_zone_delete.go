@@ -13,10 +13,10 @@ func (p *Zone) Delete(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswe
 		count++
 	})
 	if err != nil {
-		return 0, err
+		return crud.RuleAnswer{}, err
 	}
 	if count > 0 {
-		return 0, ErrZoneInUse
+		return crud.RuleAnswer{}, ErrZoneInUse
 	}
-	return crud.ApplyAndPublish, nil
+	return crud.ApplyAndPublish(), nil
 }

@@ -8,7 +8,7 @@ import (
 	"webtyp.com/storage/mem"
 )
 
-func TestIPLocator(t *testing.T) {
+func TestTenantDevices(t *testing.T) {
 	db := orm.New(mem.New())
 	ids := &mockIDGen{}
 
@@ -42,7 +42,7 @@ func TestIPLocator(t *testing.T) {
 		t.Fatalf("CreateDevice tenant-2: %v", err)
 	}
 
-	locator := devicemanager.IPLocator{
+	locator := devicemanager.TenantDevices{
 		Devices:  dm,
 		TenantID: "tenant-1",
 	}
@@ -60,7 +60,7 @@ func TestIPLocator(t *testing.T) {
 	}
 
 	// Localizador para tenant-3 (sin equipos)
-	locator3 := devicemanager.IPLocator{
+	locator3 := devicemanager.TenantDevices{
 		Devices:  dm,
 		TenantID: "tenant-3",
 	}
@@ -75,7 +75,7 @@ func TestIPLocator(t *testing.T) {
 // dependiendo de cómo se conectó: "localhost" es ::1 desde curl, 127.0.0.1 desde Chrome.
 // ClientIP de webtyp.com/auth ya devuelve la forma canónica; este módulo
 // es el otro lado de esa comparación.
-func TestIPLocator_CanonicalSpelling(t *testing.T) {
+func TestTenantDevices_CanonicalSpelling(t *testing.T) {
 	db := orm.New(mem.New())
 	dm, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, TenantID: "tenant-1"})
 	if err != nil {
@@ -96,7 +96,7 @@ func TestIPLocator_CanonicalSpelling(t *testing.T) {
 		t.Errorf("stored interface = %+v (err %v), want one with Ip %q", ifaces, err, "127.0.0.1")
 	}
 
-	locator := devicemanager.IPLocator{Devices: dm, TenantID: "tenant-1"}
+	locator := devicemanager.TenantDevices{Devices: dm, TenantID: "tenant-1"}
 	for _, ip := range []string{"127.0.0.1", "::1"} {
 		if id, ok := locator.FindByIP(ip); !ok || id != d.Id {
 			t.Errorf("FindByIP(%q) = (%q, %v), want (%q, true)", ip, id, ok, d.Id)
@@ -111,5 +111,22 @@ func TestIPLocator_CanonicalSpelling(t *testing.T) {
 	}, "127.0.0.1")
 	if !isErr(err, devicemanager.ErrIPAlreadyExists) {
 		t.Errorf("CreateDevice same machine, other spelling: err = %v, want ErrIPAlreadyExists", err)
+	}
+}
+
+func TestTenantDevices_RegisterComputerCreatesAComputerReachableByIP(t *testing.T) {
+	db := orm.New(mem.New())
+	dm, err := devicemanager.New(db, devicemanager.Deps{IDs: &mockIDGen{}, TenantID: "tenant-1"})
+	if err != nil {
+		t.Fatalf("New: %v", err)
+	}
+	devices := devicemanager.TenantDevices{Devices: dm, TenantID: "tenant-1"}
+	id, err := devices.RegisterComputer("Ana (admin)", "192.168.1.50")
+	if err != nil || id == "" {
+		t.Fatalf("RegisterComputer = %q, %v", id, err)
+	}
+	found, ok := devices.FindByIP("192.168.1.50")
+	if !ok || found != id {
+		t.Fatalf("FindByIP = %q, %v; want the registered computer %q", found, ok, id)
 	}
 }

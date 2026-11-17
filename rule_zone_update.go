@@ -27,7 +27,7 @@ func (next *Zone) Update(a crud.CurrentUser, tx crud.Tx, old *Zone, fields []str
 	next.RangeEnd = input.CanonicalIP(next.RangeEnd)
 	start, end, ok := zoneRange(*next)
 	if !ok {
-		return 0, &model.FieldError{Field: "range_start", Err: ErrInvalidZoneRange}
+		return crud.RuleAnswer{}, &model.FieldError{Field: "range_start", Err: ErrInvalidZoneRange}
 	}
 
 	var others []Zone
@@ -36,7 +36,7 @@ func (next *Zone) Update(a crud.CurrentUser, tx crud.Tx, old *Zone, fields []str
 		others = append(others, *row.(*Zone))
 	})
 	if err != nil {
-		return 0, err
+		return crud.RuleAnswer{}, err
 	}
 
 	for _, o := range others {
@@ -45,10 +45,10 @@ func (next *Zone) Update(a crud.CurrentUser, tx crud.Tx, old *Zone, fields []str
 		}
 		os, oe, ok := zoneRange(o)
 		if ok && start <= oe && os <= end {
-			return 0, ErrZoneOverlap
+			return crud.RuleAnswer{}, ErrZoneOverlap
 		}
 	}
 
 	next.UpdatedAt = time.NowNano()
-	return crud.ApplyAndPublish, nil
+	return crud.ApplyAndPublish(), nil
 }

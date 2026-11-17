@@ -28,8 +28,8 @@
 | [TestInterface_FindByIPThroughInterface](../tests/interface_test.go) | Interface — Find By IPThrough Interface |
 | [TestItemsDeclaredOnFields](../tests/item_test.go) | Items Declared On Fields |
 | [TestLegacyDeviceIP_OneGuardedStatement](../tests/legacy_ip_test.go) | El paso legado es una sola sentencia, protegida por la existencia de device.ip: |
-| [TestIPLocator](../tests/locator_test.go) | IPLocator |
-| [TestIPLocator_CanonicalSpelling](../tests/locator_test.go) | La IP con la que se guarda un equipo y la IP que auth observa al iniciar sesión |
+| [TestTenantDevices](../tests/tenant_devices_test.go) | TenantDevices responde por IP solo en su tenant |
+| [TestTenantDevices_CanonicalSpelling](../tests/tenant_devices_test.go) | La IP con la que se guarda un equipo y la IP que auth observa al iniciar sesión |
 | [TestMigrate_UpToDate_OnlyEnsuresTables](../tests/migrate_test.go) | Branch "listing works, nothing missing": only the idempotent CREATE TABLE per table, in order. |
 | [TestMigrate_NewField_AddsOnlyThatColumn](../tests/migrate_test.go) | Branch "field missing from the table": exactly one ADD COLUMN, for that field of that table. |
 | [TestMigrate_IntrospectionFails_ReturnsErrorAndStops](../tests/migrate_test.go) | Branch "listing the columns failed": the error comes back and no later table is touched. |
@@ -46,3 +46,4 @@
 | [TestZone_Overlap](../tests/zone_test.go) | Zone — Overlap |
 | [TestZone_DeleteInUse](../tests/zone_test.go) | Zone — Delete In Use |
 | [TestZone_TenantIsolation](../tests/zone_test.go) | Zone — Tenant Isolation |
+| [TestTenantDevices_RegisterComputerCreatesAComputerReachableByIP](../tests/tenant_devices_test.go) | RegisterComputer deja un computador activo con una interfaz «lan» que FindByIP encuentra |

@@ -31,20 +31,20 @@ func (next *Device) Update(a crud.CurrentUser, tx crud.Tx, old *Device, fields [
 	*next = d // merge para comprobaciones y guardado por crud
 
 	if !isValidDeviceType(next.Type) {
-		return 0, &model.FieldError{Field: "type", Err: fmt.Err("invalid device type: %s", next.Type)}
+		return crud.RuleAnswer{}, &model.FieldError{Field: "type", Err: fmt.Err("invalid device type: %s", next.Type)}
 	}
 	if _, err := network.ParseAccess(next.Access); err != nil {
-		return 0, err
+		return crud.RuleAnswer{}, err
 	}
 	if next.ZoneId != "" {
 		var z Zone
 		if err := tx.ReadOne(&z, next.ZoneId); err != nil {
-			return 0, &model.FieldError{Field: "zone_id", Err: err}
+			return crud.RuleAnswer{}, &model.FieldError{Field: "zone_id", Err: err}
 		}
 	}
 	next.UpdatedAt = time.NowNano()
 
 	// DeactivateDevice logic (is_active = false)
 	// No other manual hook is needed, crud will emit event with changes.
-	return crud.ApplyAndPublish, nil
+	return crud.ApplyAndPublish(), nil
 }

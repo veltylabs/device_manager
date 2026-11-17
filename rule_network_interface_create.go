@@ -13,13 +13,13 @@ import (
 func (p *NetworkInterface) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (crud.RuleAnswer, error) {
 	var dev Device
 	if err := tx.ReadOne(&dev, p.DeviceId); err != nil {
-		return 0, err
+		return crud.RuleAnswer{}, err
 	}
 
 	if p.Mac != "" {
 		p.Mac = input.CanonicalMAC(p.Mac)
 		if input.IsLocallyAdministeredMAC(p.Mac) {
-			return 0, &model.FieldError{Field: "mac", Err: ErrRandomizedMAC}
+			return crud.RuleAnswer{}, &model.FieldError{Field: "mac", Err: ErrRandomizedMAC}
 		}
 		var dupCount int
 		qDup := crud.Query{Conditions: []storage.Condition{
@@ -30,10 +30,10 @@ func (p *NetworkInterface) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (cr
 			dupCount++
 		})
 		if err != nil {
-			return 0, err
+			return crud.RuleAnswer{}, err
 		}
 		if dupCount > 0 {
-			return 0, ErrMACAlreadyExists
+			return crud.RuleAnswer{}, ErrMACAlreadyExists
 		}
 	}
 
@@ -43,24 +43,24 @@ func (p *NetworkInterface) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (cr
 		all = append(all, *row.(*NetworkInterface))
 	})
 	if err != nil {
-		return 0, err
+		return crud.RuleAnswer{}, err
 	}
 
 	var zone Zone
 	hasZone := dev.ZoneId != ""
 	if hasZone {
 		if err := tx.ReadOne(&zone, dev.ZoneId); err != nil {
-			return 0, err
+			return crud.RuleAnswer{}, err
 		}
 	}
 
 	if p.Ip == "" {
 		if !hasZone {
-			return 0, &model.FieldError{Field: "ip", Err: ErrNoZone}
+			return crud.RuleAnswer{}, &model.FieldError{Field: "ip", Err: ErrNoZone}
 		}
 		ip, ok := freeIP(zone, all, p.Id)
 		if !ok {
-			return 0, ErrZoneFull
+			return crud.RuleAnswer{}, ErrZoneFull
 		}
 		p.Ip = ip
 	} else {
@@ -69,17 +69,17 @@ func (p *NetworkInterface) Create(a crud.CurrentUser, tx crud.Tx, m *Module) (cr
 			n, okIP := ipv4ToUint32(p.Ip)
 			s, e, okZone := zoneRange(zone)
 			if !okIP || !okZone || n < s || n > e {
-				return 0, &model.FieldError{Field: "ip", Err: ErrIPOutsideZone}
+				return crud.RuleAnswer{}, &model.FieldError{Field: "ip", Err: ErrIPOutsideZone}
 			}
 		}
 		for _, o := range all {
 			if o.Id != p.Id && o.Ip == p.Ip {
-				return 0, ErrIPAlreadyExists
+				return crud.RuleAnswer{}, ErrIPAlreadyExists
 			}
 		}
 	}
 
 	p.Id = m.ids.NewID()
 	p.UpdatedAt = time.NowNano()
-	return crud.ApplyAndPublish, nil
+	return crud.ApplyAndPublish(), nil
 }
