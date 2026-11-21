@@ -42,10 +42,10 @@ func TestItemsDeclaredOnFields(t *testing.T) {
 		Mac:   "00:11:22:33:44:55",
 	}
 	rNI := ni.Item()
-	if rNI.Label != "lan" {
-		t.Errorf("NetworkInterface Title = %q, want %q", rNI.Label, "lan")
+	if rNI.Label != "192.168.1.100" {
+		t.Errorf("NetworkInterface Title = %q, want %q", rNI.Label, "192.168.1.100")
 	}
-	if rNI.Description != "00:11:22:33:44:55 · 192.168.1.100" {
-		t.Errorf("NetworkInterface Detail = %q, want %q", rNI.Description, "00:11:22:33:44:55 · 192.168.1.100")
+	if rNI.Description != "lan · 00:11:22:33:44:55" {
+		t.Errorf("NetworkInterface Detail = %q, want %q", rNI.Description, "lan · 00:11:22:33:44:55")
 	}
 }

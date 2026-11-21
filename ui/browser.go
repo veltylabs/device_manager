@@ -18,32 +18,38 @@ const (
 	descInterfaces lang.Text = "The network connections of each device: its MAC and IP address. Staff log in from the devices registered here."
 )
 
-// Screens declara las pantallas que este módulo ofrece al menú de la app.
+// Screens declara las pantallas que este módulo ofrece al menú de la app, agrupadas bajo un solo enlace raíz.
 //
 // Ejemplo: screens := ui.Screens(view.BrowserDeps{Caller: caller})
 func Screens(d view.BrowserDeps) []view.Screen {
 	caller := d.Caller
-	return []view.Screen{
-		{
-			ID:         ID,
-			Label:      Label,
-			Icon:       laptop.Ref.ID(),
-			Permission: model.ResourceOf(&devicemanager.DeviceModel),
-			Presenter:  devicemanager.NewView(caller, view.WithDescription(descDevices)),
+	return []view.Screen{{
+		ID:    ID,
+		Label: Label,
+		Icon:  laptop.Ref.ID(),
+		Help:  descDevices,
+		Children: []view.Screen{
+			{
+				ID:         ID + ".devices",
+				Label:      Label,
+				Icon:       laptop.Ref.ID(),
+				Permission: model.ResourceOf(&devicemanager.DeviceModel),
+				Presenter:  devicemanager.NewView(caller, view.WithDescription(descDevices)),
+			},
+			{
+				ID:         ZonesID,
+				Label:      ZonesLabel,
+				Icon:       location.Ref.ID(),
+				Permission: model.ResourceOf(&devicemanager.ZoneModel),
+				Presenter:  devicemanager.NewZoneView(caller, view.WithDescription(descZones)),
+			},
+			{
+				ID:         InterfacesID,
+				Label:      InterfacesLabel,
+				Icon:       network.Ref.ID(),
+				Permission: model.ResourceOf(&devicemanager.NetworkInterfaceModel),
+				Presenter:  devicemanager.NewNetworkInterfaceView(caller, view.WithDescription(descInterfaces)),
+			},
 		},
-		{
-			ID:         ZonesID,
-			Label:      ZonesLabel,
-			Icon:       location.Ref.ID(),
-			Permission: model.ResourceOf(&devicemanager.ZoneModel),
-			Presenter:  devicemanager.NewZoneView(caller, view.WithDescription(descZones)),
-		},
-		{
-			ID:         InterfacesID,
-			Label:      InterfacesLabel,
-			Icon:       network.Ref.ID(),
-			Permission: model.ResourceOf(&devicemanager.NetworkInterfaceModel),
-			Presenter:  devicemanager.NewNetworkInterfaceView(caller, view.WithDescription(descInterfaces)),
-		},
-	}
+	}}
 }

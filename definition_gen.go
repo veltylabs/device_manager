@@ -255,7 +255,7 @@ func (*NetworkInterface) Allow() model.Action     { return NetworkInterfaceModel
 func (*NetworkInterfaceList) Allow() model.Action { return NetworkInterfaceModel.Allow }
 
 func (m *NetworkInterface) Item() model.Item {
-	return model.Item{ID: m.Id, Label: m.Label, Description: model.JoinItem(m.Mac, m.Ip)}
+	return model.Item{ID: m.Id, Label: m.Ip, Description: model.JoinItem(m.Label, m.Mac)}
 }
 
 var NetworkInterface_ = struct {

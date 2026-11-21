@@ -15,7 +15,7 @@ type mockIDGen struct{ counter int }
 
 func (g *mockIDGen) NewID() string {
 	g.counter++
-	return "test-id-" + fmt.Convert(g.counter).String() // tinywasm/fmt — la librería estándar strconv está prohibida, incluso en tests
+	return "test-id-" + fmt.Convert(g.counter).String() // webtyp/fmt — la librería estándar strconv está prohibida, incluso en tests
 }
 
 var _ model.IDGenerator = (*mockIDGen)(nil)

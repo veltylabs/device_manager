@@ -12,12 +12,22 @@ import (
 	"webtyp.com/view"
 )
 
-// Las tres pantallas se explican solas, validan según view.Screen y cada una tiene su propio dibujo y permiso.
+// Las tres pantallas se agrupan bajo un enlace padre, validan según view.Screen y cada una tiene su propio dibujo y permiso.
 func TestUI_ScreensAreDescribedWithTheirOwnIcon(t *testing.T) {
 	fake := &uiFakeCaller{}
 	screens := ui.Screens(view.BrowserDeps{Caller: view.NewRecords().Caller(fake)})
-	if len(screens) != 3 {
-		t.Fatalf("expected 3 screens, got %d", len(screens))
+	if len(screens) != 1 {
+		t.Fatalf("expected 1 parent screen, got %d", len(screens))
+	}
+	parent := screens[0]
+	if err := parent.Validate(); err != nil {
+		t.Fatalf("parent screen %s validation failed: %v", parent.ID, err)
+	}
+	if parent.ID != ui.ID || parent.Icon != laptop.Ref.ID() {
+		t.Errorf("parent screen = (%q, %q), want (%q, %q)", parent.ID, parent.Icon, ui.ID, laptop.Ref.ID())
+	}
+	if len(parent.Children) != 3 {
+		t.Fatalf("expected 3 child screens, got %d", len(parent.Children))
 	}
 
 	want := []struct {
@@ -25,13 +35,13 @@ func TestUI_ScreensAreDescribedWithTheirOwnIcon(t *testing.T) {
 		icon       string
 		permission string
 	}{
-		{ui.ID, laptop.Ref.ID(), string(model.ResourceOf(&devicemanager.DeviceModel))},
+		{ui.ID + ".devices", laptop.Ref.ID(), string(model.ResourceOf(&devicemanager.DeviceModel))},
 		{ui.ZonesID, location.Ref.ID(), string(model.ResourceOf(&devicemanager.ZoneModel))},
 		{ui.InterfacesID, network.Ref.ID(), string(model.ResourceOf(&devicemanager.NetworkInterfaceModel))},
 	}
 
 	for i, w := range want {
-		s := screens[i]
+		s := parent.Children[i]
 		if err := s.Validate(); err != nil {
 			t.Fatalf("screen %s validation failed: %v", s.ID, err)
 		}

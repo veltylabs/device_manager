@@ -82,9 +82,9 @@ var NetworkInterfaceModel = model.Definition{
 		{Name: "id", Type: model.Text(), DB: &model.FieldDB{PK: true}, ServerOnly: true, OmitEmpty: true},
 		{Name: "tenant_id", Type: model.Text(), NotNull: true, ServerOnly: true},
 		{Name: "device_id", Type: input.Select(), Label: "Device", NotNull: true, Ref: &DeviceModel, DB: &model.FieldDB{RefColumn: "id"}},
-		{Name: "label", Type: input.Text(), Label: "Label", NotNull: true, Permitted: model.Permitted{Minimum: 1, Maximum: 32}, Item: model.ItemLabel},
+		{Name: "label", Type: input.Text(), Label: "Label", NotNull: true, Permitted: model.Permitted{Minimum: 1, Maximum: 32}, Item: model.ItemDescription},
 		{Name: "mac", Type: input.MAC(), Label: "MAC address", OmitEmpty: true, Item: model.ItemDescription},
-		{Name: "ip", Type: input.IP(), Label: "IP address", OmitEmpty: true, Item: model.ItemDescription},
+		{Name: "ip", Type: input.IP(), Label: "IP address", OmitEmpty: true, Item: model.ItemLabel},
 		{Name: "updated_at", Type: model.NanoTime(), OmitEmpty: true, ServerOnly: true},
 	},
 }
