@@ -30,7 +30,7 @@ func Screens(d view.BrowserDeps) []view.Screen {
 		Help:  descDevices,
 		Children: []view.Screen{
 			{
-				ID:         ID + ".devices",
+				ID:         DevicesID,
 				Label:      Label,
 				Icon:       laptop.Ref.ID(),
 				Permission: model.ResourceOf(&devicemanager.DeviceModel),

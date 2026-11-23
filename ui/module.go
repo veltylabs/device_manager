@@ -15,6 +15,7 @@ const Label = "Devices"
 //
 // Ejemplo: zonesID := ui.ZonesID
 const (
+	DevicesID       = ID + ".devices"
 	ZonesID         = "device_manager_zones"
 	ZonesLabel      = "Zones"
 	InterfacesID    = "device_manager_interfaces"

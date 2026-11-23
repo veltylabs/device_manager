@@ -1,5 +1,7 @@
 package devicemanager
 
+import "webtyp.com/fmt"
+
 // lanInterfaceLabel nombra la interfaz que recibe un computador registrado desde su IP.
 const lanInterfaceLabel = "lan"
 
@@ -40,4 +42,20 @@ func (t TenantDevices) RegisterComputer(name, ip string) (string, error) {
 		return "", err
 	}
 	return dev.Id, nil
+}
+
+// DeviceOptions entrega los equipos activos del tenant como {id, nombre}: es lo que el mapa de ocupación
+// (room_layout.DeviceReader) ofrece al tocar un PC para decir cuál equipo de red es.
+//
+// Ejemplo: opts, err := dm.DeviceOptions(tenantID)
+func (m *Module) DeviceOptions(tenantID string) ([]fmt.KeyValue, error) {
+	list, err := m.ListDevices(tenantID, DeviceFilter{ActiveOnly: true})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]fmt.KeyValue, 0, len(list))
+	for _, d := range list {
+		out = append(out, fmt.KeyValue{Key: d.Id, Value: d.Name})
+	}
+	return out, nil
 }

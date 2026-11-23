@@ -47,3 +47,4 @@
 | [TestZone_DeleteInUse](../tests/zone_test.go) | Zone — Delete In Use |
 | [TestZone_TenantIsolation](../tests/zone_test.go) | Zone — Tenant Isolation |
 | [TestTenantDevices_RegisterComputerCreatesAComputerReachableByIP](../tests/tenant_devices_test.go) | RegisterComputer deja un computador activo con una interfaz «lan» que FindByIP encuentra |
+| [TestDeviceOptions_ActiveDevicesToChoose](../tests/device_options_test.go) | Los equipos activos del tenant se ofrecen para elegir (id y nombre); uno dado de baja no |
