@@ -19,7 +19,7 @@ require (
 	webtyp.com/svg v0.3.43
 	webtyp.com/time v0.6.7
 	webtyp.com/unixid v0.3.1
-	webtyp.com/view v0.6.87
+	webtyp.com/view v0.6.95
 )
 
 require (
