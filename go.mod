@@ -6,7 +6,7 @@ require (
 	webtyp.com/crud v0.0.19
 	webtyp.com/ddl v0.0.59
 	webtyp.com/events v0.1.15
-	webtyp.com/fmt v1.0.3
+	webtyp.com/fmt v1.0.4
 	webtyp.com/form v0.4.72
 	webtyp.com/icons v0.0.42
 	webtyp.com/input v0.2.5
@@ -14,7 +14,7 @@ require (
 	webtyp.com/model v0.2.26
 	webtyp.com/network v0.1.1
 	webtyp.com/orm v0.12.42
-	webtyp.com/router v0.5.9
+	webtyp.com/router v0.5.10
 	webtyp.com/storage v0.2.8
 	webtyp.com/svg v0.3.43
 	webtyp.com/time v0.6.7
